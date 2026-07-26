@@ -16,40 +16,22 @@
         </div>
         <div>
             <span id="nodo-actual" class="badge-nodo">Nodo Activo: Conectando...</span>
-            <button id="btn-refrescar" style="background: none; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-left: 10px;">🔄 Refrescar</button>
+            <button id="btn-refrescar" class="btn-ghost" style="margin-left: 12px;">🔄 Refrescar</button>
         </div>
     </header>
 
     <div class="container">
-        <!-- Dashboard Grid Layout -->
-        <div class="grid-layout">
+        <!-- Barra de Pestañas de Navegación -->
+        <div class="tabs-container">
+            <button id="tab-btn-operaciones" class="tab-btn active" onclick="cambiarPestaña('operaciones')">💳 Operaciones y Resultados Bancarios</button>
+            <button id="tab-btn-tecnicos" class="tab-btn" onclick="cambiarPestaña('tecnicos')">⚙️ Monitoreo y Detalles Técnicos (ACID / WAL / LSN)</button>
+            <button id="tab-btn-replicacion" class="tab-btn" onclick="cambiarPestaña('replicacion')">🗄️ Bases de Datos y Replicación (Master vs Réplicas)</button>
+        </div>
 
-            <!-- Card 1: Cuentas Bancarias y Consistencia -->
-            <div class="card">
-                <div class="card-title">
-                    <span>💳 Cuentas Bancarias y Saldos</span>
-                    <span id="saldo-invariante" style="font-size: 0.9rem; color: var(--accent-green);">$0.00 USD</span>
-                </div>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
-                    Invariante de Consistencia (C): El saldo total del banco se mantiene constante antes y después de cada transacción.
-                </p>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Número Cuenta</th>
-                                <th>Titular</th>
-                                <th>Saldo Disponible</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-cuentas-body">
-                            <tr><td colspan="3">Cargando cuentas...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <!-- SECCIÓN 1: OPERACIONES Y RESULTADOS (Pestaña Por Defecto) -->
+        <div id="seccion-operaciones" class="tab-section active">
 
-            <!-- Card 2: Ejecución de Transacciones ACID -->
+            <!-- Card: Ejecución de Transacciones ACID -->
             <div class="card">
                 <div class="card-title">
                     <span>💸 Transferencia Bancaria ACID</span>
@@ -84,8 +66,85 @@
                 </form>
             </div>
 
-            <!-- Card 3: Monitor WAL e InnoDB Redo Log (LSN) -->
+            <!-- Card: Cuentas Bancarias y Consistencia -->
             <div class="card">
+                <div class="card-title">
+                    <span>💳 Cuentas Bancarias y Saldos</span>
+                    <span id="saldo-invariante" style="font-size: 0.9rem; color: var(--accent-green);">$0.00 USD</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    Invariante de Consistencia (C): El saldo total del banco se mantiene constante antes y después de cada transacción ($165,000.00 USD).
+                </p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Número Cuenta</th>
+                                <th>Titular</th>
+                                <th>Saldo Disponible</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-cuentas-body">
+                            <tr><td colspan="3">Cargando cuentas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Card: Historial de Transacciones Confirmadas/Revertidas -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">
+                    <span>📊 Resumen y Resultados de Transacciones Procesadas</span>
+                </div>
+                <div class="table-container" style="max-height: 220px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>GUID</th>
+                                <th>Operación (Origen &rarr; Destino)</th>
+                                <th>Monto</th>
+                                <th>Resultado / Estado ACID</th>
+                                <th>Nodo Ejecutor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-transacciones-body">
+                            <tr><td colspan="5">Cargando historial de transacciones...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SECCIÓN 2: DETALLES TÉCNICOS (WAL, LSN, Replicación y Arquitectura) -->
+        <div id="seccion-tecnicos" class="tab-section" style="display: none;">
+
+            <!-- Card: Monitoreo en Tiempo Real de los 3 Nodos LAN -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">
+                    <span>🖥️ Estado en Tiempo Real de los 3 Nodos en la Red LAN</span>
+                    <span style="font-size: 0.8rem; color: var(--accent-blue);">Balanceo Round Robin Activo</span>
+                </div>
+                <div class="table-container" style="max-height: 280px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nodo API / Dispositivo</th>
+                                <th>Instancia Base de Datos & Conexión</th>
+                                <th>Rol en Arquitectura</th>
+                                <th>Estado de Conectividad</th>
+                                <th>Último LSN / Respuesta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-nodos-body">
+                            <tr><td colspan="5">Consultando estado real de PC1, PC2 y PC3...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Card: Monitor WAL e InnoDB Redo Log (LSN) -->
+            <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
                     <span>📝 Monitor Write-Ahead Logging (WAL)</span>
                     <span style="font-size: 0.8rem; color: var(--accent-purple);">InnoDB Engine</span>
@@ -102,10 +161,10 @@
                     <div>Último Checkpoint at:</div>
                     <div id="lsn-checkpoint" class="metric-val">Cargando Checkpoint...</div>
                 </div>
-                <button id="btn-abrir-plantilla" class="btn btn-danger" style="margin-top: 10px;">📋 Abrir Plantilla de Registro y Análisis de Fallos</button>
+                <button id="btn-abrir-plantilla" class="btn btn-secondary" style="margin-top: 14px;">📋 Abrir Plantilla de Registro y Análisis de Fallos</button>
             </div>
 
-            <!-- Card 4: Bitácora WAL de Aplicación -->
+            <!-- Card: Bitácora WAL de Aplicación -->
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
                     <span>📜 Bitácora WAL de Transacciones (Secuencia de Fases)</span>
@@ -113,7 +172,7 @@
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
                     Muestra los pasos registrados por el algoritmo WAL: <strong>INICIADA &rarr; WAL_GRABADO_BUFFER &rarr; REDO_PREPARADO &rarr; COMMIT_FLUSH / ROLLBACK_EJECUTADO</strong>.
                 </p>
-                <div class="table-container">
+                <div class="table-container" style="max-height: 280px; overflow-y: auto;">
                     <table>
                         <thead>
                             <tr>
@@ -129,30 +188,105 @@
                 </div>
             </div>
 
-            <!-- Card 5: Historial de Transacciones Confirmadas/Revertidas -->
+        </div>
+
+        <!-- SECCIÓN 3: BASES DE DATOS Y REPLICACIÓN (Master vs Réplicas) -->
+        <div id="seccion-replicacion" class="tab-section" style="display: none;">
+
+            <!-- Card: Comparativa de Topología y Estado (Master vs Réplicas) -->
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
-                    <span>📊 Historial de Transacciones Procesadas</span>
+                    <span>🗄️ Topología y Estado de Replicación MariaDB GTID (Master vs Réplicas)</span>
+                    <span style="font-size: 0.8rem; color: var(--accent-purple);">Sincronización Asíncrona / GTID Activo</span>
                 </div>
-                <div class="table-container">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    Muestra los parámetros internos y métricas del motor de base de datos consultados directamente a través de una conexión JDBC hacia su contenedor local.
+                </p>
+                <div class="table-container" style="max-height: 280px; overflow-y: auto;">
                     <table>
                         <thead>
                             <tr>
-                                <th>GUID</th>
-                                <th>Operación (Origen &rarr; Destino)</th>
-                                <th>Monto</th>
-                                <th>Estado</th>
-                                <th>Nodo Ejecutor</th>
+                                <th>Parámetro / Métrica del Motor BD</th>
+                                <th>MariaDB Master (PC1 - 192.168.1.93)</th>
+                                <th>MariaDB Replica 1 (PC2 - 192.168.1.8)</th>
+                                <th>MariaDB Replica 2 (PC3 - 192.168.1.30)</th>
                             </tr>
                         </thead>
-                        <tbody id="tabla-transacciones-body">
-                            <tr><td colspan="5">Cargando historial de transacciones...</td></tr>
+                        <tbody id="tabla-replicacion-topologia-body">
+                            <tr><td colspan="4">Consultando estado real de las bases de datos en los 3 nodos...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
+            <!-- Card: Verificación de Lectura en Tiempo Real desde cada BD -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">
+                    <span>🔍 Verificación de Lectura Distribuida (Consistencia de Datos en Vivo)</span>
+                    <span style="font-size: 0.8rem; color: var(--accent-green);">Prueba de Lectura Independiente por Nodo</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    Se ejecuta una consulta <code>SELECT COUNT(*), SUM(saldo) FROM cuentas</code> sobre la base de datos de cada PC para demostrar visualmente que la replicación mantiene una copia idéntica y sincronizada de los datos.
+                </p>
+                <div class="table-container" style="max-height: 280px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Instancia de Base de Datos Leída</th>
+                                <th>Registros en Tabla Cuentas</th>
+                                <th>Suma Total de Saldos (Invariante)</th>
+                                <th>Estado de Consistencia</th>
+                                <th>Tipo de Consulta / Conexión</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-replicacion-lectura-body">
+                            <tr><td colspan="5">Verificando sincronización de lectura en las réplicas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Card: Consola Interactiva de Lectura en Bruto (JSON) en Modo Claro -->
+            <div class="card" style="grid-column: 1 / -1; border: 1px solid var(--border-light); background: var(--bg-card);">
+                <div class="card-title" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <span style="color: var(--text-main); font-weight: 600;">💻 Consola en Vivo de Lectura Bruta (JSON por Nodo BD)</span>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-top: 4px;">
+                            Selecciona una instancia para extraer los registros reales de las tablas en formato JSON dentro de un visor limpio Modo Claro.
+                        </div>
+                    </div>
+                    <span id="consola-bd-badge" class="tag" style="background: rgba(0, 82, 204, 0.1); color: var(--accent-blue); font-family: monospace; font-size: 0.75rem;">
+                        Esperando Selección de BD
+                    </span>
+                </div>
+
+                <!-- Botones de Acción de Consulta -->
+                <div style="display: flex; gap: 12px; margin: 12px 0; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(1)" style="background: var(--accent-blue); font-size: 0.85rem; padding: 8px 16px;">
+                        🟢 Leer BD Master (PC1 - 192.168.1.93)
+                    </button>
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(2)" style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">
+                        🟣 Leer BD Réplica 1 (PC2 - 192.168.1.8)
+                    </button>
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(3)" style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">
+                        🟣 Leer BD Réplica 2 (PC3 - 192.168.1.30)
+                    </button>
+                </div>
+
+                <!-- Ventana de Consola / Salida JSON en Modo Claro -->
+                <div style="background: rgba(248, 250, 252, 0.95); border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; max-height: 260px; overflow: auto; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+                    <pre id="consola-bd-output" style="margin: 0; font-family: 'Fira Code', 'Courier New', Courier, monospace; font-size: 0.82rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-all;">// ⚡ Consola Preparada y Conectada (Visor JSON Modo Claro).
+// Pulsa en cualquiera de los botones superiores para ejecutar la lectura directa a la base de datos de ese PC específico...
+// Se devolverán los datos en bruto de:
+//   1. Servidor MariaDB (Hostname, Server ID, GTID, Read-Only Flag)
+//   2. Tabla 'cuentas' (Saldos en tiempo real)
+//   3. Tabla 'transacciones' (Historial de transferencias persistidas)
+//   4. Tabla 'bitacora_wal' (Registros Write-Ahead Logging confirmados)</pre>
+                </div>
+            </div>
+
         </div>
+
     </div>
 
     <!-- Contenedor para Notificaciones Toast -->

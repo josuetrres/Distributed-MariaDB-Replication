@@ -2,6 +2,7 @@ package com.banco.acid.controller;
 
 import com.banco.acid.dto.MetricasInnodbDTO;
 import com.banco.acid.dto.RespuestaSistema;
+import com.banco.acid.service.ReplicacionService;
 import com.banco.acid.service.TransaccionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +19,7 @@ import java.util.Map;
 public class MetricasController {
 
     private final TransaccionService transaccionService;
+    private final ReplicacionService replicacionService;
 
     @Value("${node.name:API1-PC1}")
     private String nombreNodo;
@@ -53,6 +55,28 @@ public class MetricasController {
                 nombreNodo,
                 null,
                 info
+        ));
+    }
+
+    @GetMapping("/replicacion")
+    public ResponseEntity<RespuestaSistema<Map<String, Object>>> obtenerEstadoReplicacion() {
+        Map<String, Object> estado = replicacionService.obtenerEstadoReplicacionLocal();
+        return ResponseEntity.ok(RespuestaSistema.ok(
+                "Estado de Replicación y Lectura de BD obtenido",
+                nombreNodo,
+                null,
+                estado
+        ));
+    }
+
+    @GetMapping("/datos-bd")
+    public ResponseEntity<RespuestaSistema<Map<String, Object>>> obtenerDatosBdLocal() {
+        Map<String, Object> datos = replicacionService.consultarDatosLocalesDb();
+        return ResponseEntity.ok(RespuestaSistema.ok(
+                "Datos brutos y registros en formato JSON obtenidos desde la BD local",
+                nombreNodo,
+                null,
+                datos
         ));
     }
 }

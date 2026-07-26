@@ -82,15 +82,18 @@ public class TransaccionService {
         cuentaRepository.save(origen);
         cuentaRepository.save(destino);
 
+        // Forzar envío inmediato del UPDATE SQL a MariaDB para que modifique el Buffer Pool y escriba en el InnoDB Undo Log
+        entityManager.flush();
+
         // Paso 3 WAL: Redo Preparado
         registrarPasoWal(txGuid, "REDO_PREPARADO", origen.getId(), destino.getId(), request.getMonto(),
                 origen.getSaldo(), origen.getSaldo(), destino.getSaldo(), destino.getSaldo(),
-                "Paso 3: Cambios cargados en InnoDB Buffer Pool. Preparando volcado de Redo Log en disco.");
+                "Paso 3: UPDATE SQL ejecutado con entityManager.flush(). Cambios en InnoDB Buffer Pool y Undo Log registrados.");
 
         // Simulación de Falla Repentina (Corte de Energía / Excepción Deliberada)
         if (request.isSimularError()) {
-            log.error("[WAL-FALLO-SIMULADO] Interrupción provocado en medio de la transacción GUID: {}. Iniciando proceso UNDO de rollback...", txGuid);
-            throw new RuntimeException("CRASH_SIMULADO: Error repentino o interrupción provocado para evaluar proceso de UNDO (Rollback automático).");
+            log.error("[WAL-FALLO-SIMULADO] Interrupción provocada en medio de la transacción GUID: {}. Iniciando proceso UNDO Log...", txGuid);
+            throw new RuntimeException("CRASH_SIMULADO: Interrupción provocada tras enviar el débito a MariaDB. El motor InnoDB ejecutó automáticamente el proceso UNDO Log para revertir los cambios (Atomicidad ACID intacta).");
         }
 
         // Paso 4 WAL: Confirmación (COMMIT) y Volcado en Disco (innodb_flush_log_at_trx_commit=1)
@@ -139,20 +142,20 @@ public class TransaccionService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrarUndoWal(String txGuid, Integer origenId, Integer destinoId, BigDecimal monto, String causaError) {
-        registrarPasoWal(txGuid, "ROLLBACK_EJECUTADO", origenId, destinoId, monto,
+        registrarPasoWal(txGuid, "ROLLBACK_EJECUTADO (UNDO)", origenId, destinoId, monto,
                 null, null, null, null,
-                "Proceso UNDO ejecutado: Transacción revertida completamente en MariaDB. Causa: " + causaError);
+                "Proceso UNDO Log de InnoDB ejecutado: el débito temporal de $" + monto + " USD fue revertido en MariaDB. Saldo restaurado intacto.");
 
         Transaccion tx = Transaccion.builder()
                 .txGuid(txGuid)
                 .cuentaOrigenId(origenId)
                 .cuentaDestinoId(destinoId)
                 .monto(monto)
-                .estado("REVERTIDA")
+                .estado("REVERTIDA (UNDO)")
                 .nivelAislamiento("READ_COMMITTED")
                 .errorSimulado(true)
                 .nodoEjecutor(nombreNodo)
-                .mensaje("Transacción revertida mediante proceso UNDO: " + causaError)
+                .mensaje("Débito revertido automáticamente por MariaDB InnoDB Undo Log. " + causaError)
                 .build();
 
         transaccionRepository.save(tx);

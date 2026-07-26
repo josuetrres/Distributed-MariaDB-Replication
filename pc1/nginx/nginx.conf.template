@@ -1,48 +1,52 @@
-events {
-    worker_connections 1024;
+# Balanceo y enrutamiento hacia las APIs en los 3 dispositivos de la LAN (Round Robin por defecto)
+upstream backend_apis {
+    server ${PC1_IP}:8081 max_fails=1 fail_timeout=2s;
+    server ${PC2_IP}:8082 max_fails=1 fail_timeout=2s;
+    server ${PC3_IP}:8083 max_fails=1 fail_timeout=2s;
 }
 
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
+server {
+    listen 80;
+    server_name localhost;
 
-    sendfile        on;
-    keepalive_timeout  65;
-
-    # Balanceo y enrutamiento hacia las APIs en los 3 dispositivos de la LAN
-    upstream backend_apis {
-        server ${PC1_IP}:8081 max_fails=3 fail_timeout=5s;
-        server ${PC2_IP}:8082 max_fails=3 fail_timeout=5s;
-        server ${PC3_IP}:8083 max_fails=3 fail_timeout=5s;
+    # Frontend estático en HTML5 / Vanilla CSS / JS
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
     }
 
-    server {
-        listen 80;
-        server_name localhost;
+    # Proxy inverso con balanceo Round Robin para peticiones API REST (incluye transferencias)
+    location /api/v1/ {
+        proxy_pass http://backend_apis;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 500ms;
+        proxy_read_timeout 5s;
+        proxy_next_upstream error timeout http_500 http_502 http_503 http_504;
+        proxy_next_upstream_tries 3;
+        proxy_next_upstream_timeout 2s;
+    }
 
-        # Frontend estático en HTML5 / Vanilla CSS / JS
-        location / {
-            root /usr/share/nginx/html;
-            index index.html;
-            try_files $uri $uri/ /index.html;
-        }
+    # Endpoints directos por nodo para monitoreo del estado real desde el Frontend
+    location /api/node1/ {
+        proxy_pass http://${PC1_IP}:8081/api/v1/;
+        proxy_connect_timeout 500ms;
+        proxy_read_timeout 2s;
+    }
 
-        # Proxy inverso para peticiones API REST
-        location /api/v1/ {
-            proxy_pass http://backend_apis;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_connect_timeout 5s;
-            proxy_read_timeout 10s;
-        }
+    location /api/node2/ {
+        proxy_pass http://${PC2_IP}:8082/api/v1/;
+        proxy_connect_timeout 500ms;
+        proxy_read_timeout 2s;
+    }
 
-        # Enrutamiento específico para escrituras directas a la API Master en PC1
-        location /api/v1/transacciones/transferir {
-            proxy_pass http://${PC1_IP}:8081/api/v1/transacciones/transferir;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-        }
+    location /api/node3/ {
+        proxy_pass http://${PC3_IP}:8083/api/v1/;
+        proxy_connect_timeout 500ms;
+        proxy_read_timeout 2s;
     }
 }
+
