@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mariadb-replica1:
     image: mariadb:10.11
