@@ -1,14 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "=== Esperando disponibilidad del Master MariaDB en ${MASTER_HOST}:3306 ==="
-until mariadb-admin ping -h"${MASTER_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" --silent; do
-    echo "Master no disponible aún... reintentando en 3 segundos..."
-    sleep 3
-done
+configure_replication() {
+    echo "=== [Segundo Plano] Esperando que MariaDB local acepte conexiones... ==="
+    until mariadb-admin ping -h localhost -u root -p"${DB_ROOT_PASSWORD}" --silent; do
+        sleep 2
+    done
 
-echo "=== Conectado exitosamente al Master. Configurando Replicación GTID ==="
-mariadb -h localhost -u root -p"${DB_ROOT_PASSWORD}" <<EOF
+    echo "=== [Segundo Plano] Esperando disponibilidad del Master MariaDB en ${MASTER_HOST}:3306 ==="
+    until mariadb-admin ping -h"${MASTER_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" --silent; do
+        sleep 3
+    done
+
+    echo "=== [Segundo Plano] Conectado al Master. Configurando Replicación GTID ==="
+    mariadb -h localhost -u root -p"${DB_ROOT_PASSWORD}" <<EOF
 STOP REPLICA;
 SET GLOBAL gtid_slave_pos = "";
 CHANGE REPLICATION SOURCE TO
@@ -21,5 +26,8 @@ CHANGE REPLICATION SOURCE TO
 START REPLICA;
 SHOW REPLICA STATUS\G
 EOF
+    echo "=== [Segundo Plano] Replicación GTID configurada correctamente en PC3 (Replica 2) ==="
+}
 
-echo "=== Replicación GTID configurada correctamente en PC3 (Replica 2) ==="
+configure_replication &
+

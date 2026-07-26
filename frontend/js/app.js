@@ -55,11 +55,6 @@ function configurarEventos() {
     if (btnRefrescar) {
         btnRefrescar.addEventListener('click', cargarDatos);
     }
-
-    const btnPlantilla = document.getElementById('btn-abrir-plantilla');
-    if (btnPlantilla) {
-        btnPlantilla.addEventListener('click', () => SimuladorAcid.abrirPlantillaAnalisis('ULTIMA-PRUEBA'));
-    }
 }
 
 async function cargarDatos() {
@@ -68,7 +63,6 @@ async function cargarDatos() {
             cargarCuentas(),
             cargarTransacciones(),
             cargarBitacoraWal(),
-            cargarMetricasWalInnodb(),
             cargarInvarianteConsistencia(),
             cargarInfoNodo(),
             cargarEstadoNodosRealTime(),
@@ -266,19 +260,6 @@ async function cargarBitacoraWal() {
             `;
             tbody.appendChild(tr);
         });
-    } catch (e) {
-        console.error(e);
-    }
-}
-
-async function cargarMetricasWalInnodb() {
-    try {
-        const res = await ApiService.obtenerMetricasWalInnodb();
-        if (res.datos) {
-            document.getElementById('lsn-number').innerText = res.datos.lsnSequenceNumber || 'N/A';
-            document.getElementById('lsn-flushed').innerText = res.datos.logFlushedUpTo || 'N/A';
-            document.getElementById('lsn-checkpoint').innerText = res.datos.lastCheckpointAt || 'N/A';
-        }
     } catch (e) {
         console.error(e);
     }
