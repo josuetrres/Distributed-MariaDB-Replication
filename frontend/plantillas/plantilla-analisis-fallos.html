@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Plantilla de Registro y Análisis de Fallos - Sistema Bancario ACID</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; color: #111; line-height: 1.5; }
+        h1, h2, h3 { color: #003366; }
+        .header-info { border: 2px solid #003366; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #666; padding: 8px 12px; text-align: left; }
+        th { background-color: #f0f4f8; }
+        .box { border: 1px solid #aaa; padding: 12px; background: #fafafa; margin-bottom: 15px; border-radius: 4px; }
+        .btn-print { background: #003366; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 14px; border-radius: 4px; }
+        @media print { .btn-print { display: none; } }
+    </style>
+</head>
+<body>
+
+    <button class="btn-print" onclick="window.print()">Imprimir / Guardar Reporte PDF</button>
+
+    <div class="header-info">
+        <h1>REPORTE DE EVALUACIÓN Y ANÁLISIS DE FALLOS ACID</h1>
+        <p><strong>Proyecto:</strong> Sistema Bancario Distribuido en 3 Nodos LAN con MariaDB GTID & WAL</p>
+        <p><strong>Fecha de Evaluación:</strong> <span id="fecha-reporte"></span></p>
+        <p><strong>Evaluador / Estudiante:</strong> ____________________________________________</p>
+    </div>
+
+    <h2>1. Registro de Configuración del Entorno Distribuido</h2>
+    <table>
+        <tr>
+            <th>Dispositivo</th>
+            <th>Dirección IP LAN</th>
+            <th>Servicios Activos</th>
+            <th>Rol Base de Datos</th>
+        </tr>
+        <tr>
+            <td>PC1 (Nodo Master)</td>
+            <td><span id="ip-pc1">192.168.1.10</span></td>
+            <td>Nginx (80), API1 (8081), MariaDB (3306)</td>
+            <td>Master (Write-Ahead Logging / GTID)</td>
+        </tr>
+        <tr>
+            <td>PC2 (Nodo Replica 1)</td>
+            <td><span id="ip-pc2">192.168.1.11</span></td>
+            <td>API2 (8082), MariaDB Replica 1 (3306)</td>
+            <td>Replica 1 (Read-Only / GTID)</td>
+        </tr>
+        <tr>
+            <td>PC3 (Nodo Replica 2)</td>
+            <td><span id="ip-pc3">192.168.1.12</span></td>
+            <td>API3 (8083), MariaDB Replica 2 (3306)</td>
+            <td>Replica 2 (Read-Only / GTID)</td>
+        </tr>
+    </table>
+
+    <h2>2. Bitácora de Simulación de Fallo (Corte Repentino / Excepción)</h2>
+    <div class="box">
+        <p><strong>ID Transacción (GUID):</strong> <span id="tx-guid-fallo">TX-SIMULADA-001</span></p>
+        <p><strong>Tipo de Fallo Provocado:</strong> Interrupción abrupta de contenedor (`docker kill mariadb-master`) / Simulación Excepción UNDO</p>
+        <p><strong>Nivel de Aislamiento Configurado:</strong> READ COMMITTED / SERIALIZABLE</p>
+    </div>
+
+    <h2>3. Matriz de Comprobación de Propiedades ACID</h2>
+    <table>
+        <tr>
+            <th>Propiedad ACID</th>
+            <th>Mecanismo Evaluado</th>
+            <th>Resultado Observado</th>
+            <th>Estado (Aprobado/Fallido)</th>
+        </tr>
+        <tr>
+            <td><strong>Atomicidad (A)</strong></td>
+            <td>Proceso UNDO (Rollback automático). Verificación de que el débito y crédito no quedaron en estado parcial.</td>
+            <td>Saldo de cuenta origen y destino retornaron intactos tras la falla provocado.</td>
+            <td>PASÓ [  ]</td>
+        </tr>
+        <tr>
+            <td><strong>Consistencia (C)</strong></td>
+            <td>Restricción CHECK y suma total del dinero circulante (Invariante).</td>
+            <td>Suma total del banco permanece invariante ($165,000.00 USD).</td>
+            <td>PASÓ [  ]</td>
+        </tr>
+        <tr>
+            <td><strong>Aislamiento (I)</strong></td>
+            <td>Bloqueos de fila (SELECT ... FOR UPDATE) ante peticiones concurrentes.</td>
+            <td>No se detectaron lecturas sucias (dirty reads) ni pérdidas de actualización.</td>
+            <td>PASÓ [  ]</td>
+        </tr>
+        <tr>
+            <td><strong>Durabilidad (D) & WAL</strong></td>
+            <td>InnoDB Redo Log (`innodb_flush_log_at_trx_commit=1`) y proceso REDO tras reinicio.</td>
+            <td>Las transacciones con COMMIT fueron recuperadas completamente sin pérdida de datos.</td>
+            <td>PASÓ [  ]</td>
+        </tr>
+    </table>
+
+    <h2>4. Conclusiones y Firma de Validación</h2>
+    <div class="box" style="height: 120px;">
+        <p><em>Observaciones técnicas del evaluador:</em></p>
+    </div>
+
+    <script>
+        document.getElementById('fecha-reporte').innerText = new Date().toLocaleString('es-ES');
+    </script>
+</body>
+</html>

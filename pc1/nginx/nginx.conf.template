@@ -1,0 +1,48 @@
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+    keepalive_timeout  65;
+
+    # Balanceo y enrutamiento hacia las APIs en los 3 dispositivos de la LAN
+    upstream backend_apis {
+        server ${PC1_IP}:8081 max_fails=3 fail_timeout=5s;
+        server ${PC2_IP}:8082 max_fails=3 fail_timeout=5s;
+        server ${PC3_IP}:8083 max_fails=3 fail_timeout=5s;
+    }
+
+    server {
+        listen 80;
+        server_name localhost;
+
+        # Frontend estático en HTML5 / Vanilla CSS / JS
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+
+        # Proxy inverso para peticiones API REST
+        location /api/v1/ {
+            proxy_pass http://backend_apis;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_connect_timeout 5s;
+            proxy_read_timeout 10s;
+        }
+
+        # Enrutamiento específico para escrituras directas a la API Master en PC1
+        location /api/v1/transacciones/transferir {
+            proxy_pass http://${PC1_IP}:8081/api/v1/transacciones/transferir;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+}

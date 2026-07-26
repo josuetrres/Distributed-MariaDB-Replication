@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Transacciones Bancarias ACID - MariaDB WAL & Replicación</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+    <!-- Encabezado Principal -->
+    <header class="app-header">
+        <div class="app-title">
+            <h1>🏛️ Banco ACID - Sistema Distribuido de Transacciones</h1>
+            <p>Demostración de Write-Ahead Logging (WAL), Procesos REDO/UNDO y Replicación GTID en MariaDB</p>
+        </div>
+        <div>
+            <span id="nodo-actual" class="badge-nodo">Nodo Activo: Conectando...</span>
+            <button id="btn-refrescar" style="background: none; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-left: 10px;">🔄 Refrescar</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Dashboard Grid Layout -->
+        <div class="grid-layout">
+
+            <!-- Card 1: Cuentas Bancarias y Consistencia -->
+            <div class="card">
+                <div class="card-title">
+                    <span>💳 Cuentas Bancarias y Saldos</span>
+                    <span id="saldo-invariante" style="font-size: 0.9rem; color: var(--accent-green);">$0.00 USD</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    Invariante de Consistencia (C): El saldo total del banco se mantiene constante antes y después de cada transacción.
+                </p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Número Cuenta</th>
+                                <th>Titular</th>
+                                <th>Saldo Disponible</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-cuentas-body">
+                            <tr><td colspan="3">Cargando cuentas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Card 2: Ejecución de Transacciones ACID -->
+            <div class="card">
+                <div class="card-title">
+                    <span>💸 Transferencia Bancaria ACID</span>
+                    <span style="font-size: 0.8rem; color: var(--accent-orange);">Master (PC1)</span>
+                </div>
+                <form id="form-transferencia">
+                    <div class="form-group">
+                        <label for="cuenta-origen">Cuenta Origen (Débito):</label>
+                        <select id="cuenta-origen" class="form-control" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cuenta-destino">Cuenta Destino (Crédito):</label>
+                        <select id="cuenta-destino" class="form-control" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="monto">Monto a Transferir (USD):</label>
+                        <input type="number" id="monto" class="form-control" min="0.01" step="0.01" value="500.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="nivel-aislamiento">Nivel de Aislamiento (Isolation - I):</label>
+                        <select id="nivel-aislamiento" class="form-control">
+                            <option value="READ_COMMITTED">READ COMMITTED (Bloqueo Estándar)</option>
+                            <option value="REPEATABLE_READ">REPEATABLE READ (Lectura Repetible)</option>
+                            <option value="SERIALIZABLE">SERIALIZABLE (Bloqueo Estricto de Fila)</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="simular-error">
+                        <label for="simular-error">⚠️ Simular Falla / Excepción Repentina (Probar proceso UNDO Rollback)</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 15px;">⚡ Ejecutar Transacción Bancaria</button>
+                </form>
+            </div>
+
+            <!-- Card 3: Monitor WAL e InnoDB Redo Log (LSN) -->
+            <div class="card">
+                <div class="card-title">
+                    <span>📝 Monitor Write-Ahead Logging (WAL)</span>
+                    <span style="font-size: 0.8rem; color: var(--accent-purple);">InnoDB Engine</span>
+                </div>
+                <div class="metric-box">
+                    <div>Log Sequence Number (LSN Master):</div>
+                    <div id="lsn-number" class="metric-val">Cargando LSN...</div>
+                </div>
+                <div class="metric-box">
+                    <div>Log Flushed Up To (Disco):</div>
+                    <div id="lsn-flushed" class="metric-val">Cargando Flush LSN...</div>
+                </div>
+                <div class="metric-box">
+                    <div>Último Checkpoint at:</div>
+                    <div id="lsn-checkpoint" class="metric-val">Cargando Checkpoint...</div>
+                </div>
+                <button id="btn-abrir-plantilla" class="btn btn-danger" style="margin-top: 10px;">📋 Abrir Plantilla de Registro y Análisis de Fallos</button>
+            </div>
+
+            <!-- Card 4: Bitácora WAL de Aplicación -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">
+                    <span>📜 Bitácora WAL de Transacciones (Secuencia de Fases)</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
+                    Muestra los pasos registrados por el algoritmo WAL: <strong>INICIADA &rarr; WAL_GRABADO_BUFFER &rarr; REDO_PREPARADO &rarr; COMMIT_FLUSH / ROLLBACK_EJECUTADO</strong>.
+                </p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fase WAL</th>
+                                <th>Transacción (GUID)</th>
+                                <th>Detalles del Evento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-wal-body">
+                            <tr><td colspan="3">Cargando bitácora WAL...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Card 5: Historial de Transacciones Confirmadas/Revertidas -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">
+                    <span>📊 Historial de Transacciones Procesadas</span>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>GUID</th>
+                                <th>Operación (Origen &rarr; Destino)</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                                <th>Nodo Ejecutor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-transacciones-body">
+                            <tr><td colspan="5">Cargando historial de transacciones...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Contenedor para Notificaciones Toast -->
+    <div id="toast-container"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/simulador.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  mariadb-master:
+    image: mariadb:10.11
+    container_name: mariadb-master-pc1
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_pass_segura}
+      MARIADB_DATABASE: ${DB_NAME:-banco_acid_db}
+      MARIADB_USER: ${DB_USER:-banco_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-banco_pass_segura}
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    volumes:
+      - ./pc1/mariadb/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./pc1/mariadb/init:/docker-entrypoint-initdb.d
+      - mariadb_master_data:/var/lib/mysql
+
+  api1:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: api1-pc1
+    restart: always
+    environment:
+      SERVER_PORT: ${API1_PORT:-8081}
+      DB_MASTER_HOST: mariadb-master
+      DB_REPLICA_HOST: mariadb-master
+      DB_NAME: ${DB_NAME:-banco_acid_db}
+      DB_USER: ${DB_USER:-banco_user}
+      DB_PASSWORD: ${DB_PASSWORD:-banco_pass_segura}
+      NODE_NAME: "API1-PC1 (Master)"
+    ports:
+      - "${API1_PORT:-8081}:8081"
+    depends_on:
+      - mariadb-master
+
+  nginx-proxy:
+    build:
+      context: .
+      dockerfile: pc1/nginx/Dockerfile
+    container_name: nginx-proxy-pc1
+    restart: always
+    environment:
+      PC1_IP: ${PC1_IP:-127.0.0.1}
+      PC2_IP: ${PC2_IP:-127.0.0.1}
+      PC3_IP: ${PC3_IP:-127.0.0.1}
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    depends_on:
+      - api1
+
+  adminer:
+    image: adminer:latest
+    container_name: adminer-pc1
+    restart: always
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      - mariadb-master
+
+volumes:
+  mariadb_master_data:
