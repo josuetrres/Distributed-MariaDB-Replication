@@ -1,0 +1,49 @@
+services:
+  mariadb-replica1:
+    image: mariadb:10.11
+    container_name: mariadb-replica1-pc2
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_pass_segura}
+      MARIADB_DATABASE: ${DB_NAME:-banco_acid_db}
+      MARIADB_USER: ${DB_USER:-banco_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-banco_pass_segura}
+      MASTER_HOST: ${PC1_IP:-192.168.1.10}
+      REPL_USER: ${REPL_USER:-repl_user}
+      REPL_PASSWORD: ${REPL_PASSWORD:-repl_pass_segura}
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    volumes:
+      - ./pc2/mariadb/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./pc2/mariadb/setup-replica.sh:/setup-replica.sh
+      - mariadb_replica1_win_data:/var/lib/mysql
+    # En Windows, elimina automáticamente retornos de carro CRLF (\r) para evitar errores de sintaxis en bash
+    entrypoint: >
+      /bin/bash -c "
+      tr -d '\r' < /setup-replica.sh > /tmp/setup.sh &&
+      chmod +x /tmp/setup.sh &&
+      (/tmp/setup.sh &) &&
+      exec docker-entrypoint.sh mariadbd
+      "
+
+  api2:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: api2-pc2
+    restart: always
+    environment:
+      SERVER_PORT: ${API2_PORT:-8082}
+      DB_MASTER_HOST: ${PC1_IP:-192.168.1.10}
+      DB_REPLICA_HOST: mariadb-replica1
+      DB_NAME: ${DB_NAME:-banco_acid_db}
+      DB_USER: ${DB_USER:-banco_user}
+      DB_PASSWORD: ${DB_PASSWORD:-banco_pass_segura}
+      NODE_NAME: "API2-PC2 (Replica 1 Windows)"
+    ports:
+      - "${API2_PORT:-8082}:8082"
+    depends_on:
+      - mariadb-replica1
+
+volumes:
+  mariadb_replica1_win_data:
