@@ -1,0 +1,35 @@
+server:
+  port: ${SERVER_PORT:8081}
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: banco-acid-api
+
+  datasource:
+    # URL por defecto hacia MariaDB Master para transacciones de escritura
+    url: jdbc:mariadb://${DB_MASTER_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:banco_acid_db}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8
+    username: ${DB_USER:banco_user}
+    password: ${DB_PASSWORD:banco_pass_segura}
+    driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+        format_sql: true
+
+node:
+  name: ${NODE_NAME:API1-PC1}
+  db:
+    master-host: ${DB_MASTER_HOST:localhost}
+    replica-host: ${DB_REPLICA_HOST:localhost}

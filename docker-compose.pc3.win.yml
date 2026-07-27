@@ -16,11 +16,12 @@ services:
     volumes:
       - ./pc3/mariadb/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf
       - ./pc3/mariadb/setup-replica.sh:/setup-replica.sh
+      - ./pc1/mariadb/init/01-esquema-bancario.sql:/docker-entrypoint-initdb.d/01-esquema-bancario.sql
       - mariadb_replica2_win_data:/var/lib/mysql
     # En Windows, elimina automáticamente retornos de carro CRLF (\r) para evitar errores de sintaxis en bash
     entrypoint: >
       /bin/bash -c "
-      tr -d '\r' < /setup-replica.sh > /tmp/setup.sh &&
+      tr -d '\\r' < /setup-replica.sh > /tmp/setup.sh &&
       chmod +x /tmp/setup.sh &&
       (/tmp/setup.sh &) &&
       exec docker-entrypoint.sh mariadbd

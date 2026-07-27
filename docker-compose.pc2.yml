@@ -15,8 +15,16 @@ services:
       - "${MARIADB_PORT:-3306}:3306"
     volumes:
       - ./pc2/mariadb/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf
-      - ./pc2/mariadb/setup-replica.sh:/docker-entrypoint-initdb.d/setup-replica.sh
+      - ./pc2/mariadb/setup-replica.sh:/setup-replica.sh
+      - ./pc1/mariadb/init/01-esquema-bancario.sql:/docker-entrypoint-initdb.d/01-esquema-bancario.sql
       - mariadb_replica1_data:/var/lib/mysql
+    entrypoint: >
+      /bin/bash -c "
+      tr -d '\\r' < /setup-replica.sh > /tmp/setup.sh &&
+      chmod +x /tmp/setup.sh &&
+      (/tmp/setup.sh &) &&
+      exec docker-entrypoint.sh mariadbd
+      "
 
   api2:
     build:

@@ -58,4 +58,8 @@ ON DUPLICATE KEY UPDATE id=id;
 -- Permite conexiones desde cualquier IP de la LAN para PC2 y PC3
 CREATE USER IF NOT EXISTS 'repl_user'@'%' IDENTIFIED BY 'repl_pass_segura';
 GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'repl_user'@'%';
+
+-- Dar permisos de REPLICATION CLIENT al usuario de la API para ejecutar SHOW SLAVE STATUS
+GRANT REPLICATION CLIENT, SLAVE MONITOR ON *.* TO 'banco_user'@'%';
+
 FLUSH PRIVILEGES;
