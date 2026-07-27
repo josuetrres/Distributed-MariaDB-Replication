@@ -136,6 +136,38 @@
                 </div>
             </div>
 
+            <!-- Card: Estado del Motor InnoDB y Métricas WAL (LSN) -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">
+                    <span>Estado del Motor InnoDB y Métricas WAL (Redo Log)</span>
+                    <span style="font-size: 0.8rem; color: var(--accent-green);">Motor Transaccional ACID Activo</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                    Monitoreo en tiempo real de los números de secuencia de log (LSN) e indicadores internos de InnoDB que garantizan la atomicidad y durabilidad ante fallas.
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                    <div class="metric-box" style="margin-bottom: 0;">
+                        <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Log Sequence Number (LSN)</div>
+                        <div id="innodb-lsn" class="metric-val">Cargando...</div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Posición actual del log en memoria</div>
+                    </div>
+                    <div class="metric-box" style="margin-bottom: 0; border-left-color: var(--accent-green);">
+                        <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Volcado a Disco (Flushed Up To)</div>
+                        <div id="innodb-flushed" class="metric-val" style="color: var(--accent-blue); background: #f0f7ff; border-color: #bfdbfe;">Cargando...</div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Persistencia física asegurada</div>
+                    </div>
+                    <div class="metric-box" style="margin-bottom: 0; border-left-color: var(--accent-purple);">
+                        <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Último Checkpoint Seguro</div>
+                        <div id="innodb-checkpoint" class="metric-val" style="color: var(--accent-purple); background: #faf5ff; border-color: #e9d5ff;">Cargando...</div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Sincronización Buffer Pool &rarr; Disco</div>
+                    </div>
+                </div>
+                <details style="background: rgba(248, 250, 252, 0.8); border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-top: 10px;">
+                    <summary style="font-size: 0.85rem; font-weight: 600; color: var(--accent-blue); cursor: pointer;">Ver Salida Bruta del Servidor (SHOW ENGINE INNODB STATUS)</summary>
+                    <pre id="innodb-raw-status" style="margin-top: 12px; font-family: 'Fira Code', monospace; font-size: 0.78rem; color: #334155; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">Consultando estado bruto de InnoDB...</pre>
+                </details>
+            </div>
+
             <!-- Card: Bitácora WAL de Aplicación -->
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">

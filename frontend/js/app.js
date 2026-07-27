@@ -65,7 +65,8 @@ async function cargarDatos() {
             cargarInvarianteConsistencia(),
             cargarInfoNodo(),
             cargarEstadoNodosRealTime(),
-            cargarEstadoReplicacionRealTime()
+            cargarEstadoReplicacionRealTime(),
+            cargarMetricasWalInnodb()
         ]);
     } catch (err) {
         console.error('Error al actualizar dashboard:', err);
@@ -261,6 +262,26 @@ async function cargarBitacoraWal() {
         });
     } catch (e) {
         console.error(e);
+    }
+}
+
+async function cargarMetricasWalInnodb() {
+    try {
+        const res = await ApiService.obtenerMetricasWalInnodb();
+        if (res && res.datos) {
+            const m = res.datos;
+            const elLsn = document.getElementById('innodb-lsn');
+            const elFlushed = document.getElementById('innodb-flushed');
+            const elChk = document.getElementById('innodb-checkpoint');
+            const elRaw = document.getElementById('innodb-raw-status');
+
+            if (elLsn) elLsn.innerText = m.lsnSequenceNumber || 'N/A';
+            if (elFlushed) elFlushed.innerText = m.logFlushedUpTo || 'N/A';
+            if (elChk) elChk.innerText = m.lastCheckpointAt || 'N/A';
+            if (elRaw) elRaw.innerText = m.statusRaw || 'Sin datos brutos';
+        }
+    } catch (e) {
+        console.error('Error al cargar métricas InnoDB WAL:', e);
     }
 }
 

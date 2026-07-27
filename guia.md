@@ -23,7 +23,9 @@ Enfocada en simular el uso transaccional diario de un sistema financiero:
 ### 2. Pestaña  Detalles Técnicos
 Muestra la telemetría interna del sistema operativo y de la base de datos:
 * **Estado de Nodos LAN:** Lista los 3 nodos de la red, mostrando su dirección IP, rol (`Master`, `Replica 1`, `Replica 2`), si están activos o caídos y su latencia de respuesta.
-* **Monitor WAL e InnoDB Engine:** Muestra métricas críticas del motor interno InnoDB de MariaDB en el PC Master, tales como los números LSN en búfer y disco.
+* **Tarjeta de Estado del Motor InnoDB y Métricas WAL (LSN):** 
+  * Visualiza en 3 cajas de métricas (KPIs) en tiempo real el **Log Sequence Number (LSN)** en memoria, la posición **Flushed Up To** (volcada físicamente a disco en `ib_logfile`) y el **Último Checkpoint Seguro**.
+  * Incluye un visor desplegable interactivo que ejecuta la consulta nativa `SHOW ENGINE INNODB STATUS` directamente a través de JDBC para inspeccionar la salida completa del motor relacional.
 * **Plantilla de Análisis de Fallos:** Botón interactivo que despliega una guía para auditorías manuales post-falla.
 * **Bitácora WAL de Aplicación:** Tabla cronológica que registra cada paso del algoritmo Write-Ahead Logging de la capa Java (ej. `INICIADA`, `WAL_GRABADO_BUFFER`, `REDO_PREPARADO`, `COMMIT_FLUSH`, `ROLLBACK_EJECUTADO`).
 
@@ -32,6 +34,19 @@ Dedicada exclusivamente a inspeccionar el estado de la topología distribuida:
 * **Tabla de Topología MariaDB GTID:** Muestra la configuración de replicación de cada nodo (Server ID, posición GTID actual, host master conectado, modo lectura/escritura).
 * **Verificación de Lectura Distribuida:** Realiza consultas JDBC directas e independientes a la base de datos de cada PC para comparar cuántas cuentas y qué suma de saldo reporta cada nodo en tiempo real, garantizando la consistencia eventual o estricta.
 * **Consola en Vivo de Lectura Bruta (JSON):** Herramienta que permite consultar directamente las tablas `cuentas`, `transacciones` y `bitacora_wal` de cualquier base de datos (PC1, PC2 o PC3) mediante un botón y visualizar el resultado en formato JSON estructurado en un visor claro.
+
+--- ## Permisos y Seguridad de Base de Datos para Monitoreo
+
+Para que los servicios Spring Boot y el panel de control puedan consultar la salud de la replicación y la telemetría del motor transaccional sin bloqueos de seguridad, se configuraron los siguientes permisos específicos a nivel de usuario MariaDB (`banco_user`):
+
+* **`REPLICATION CLIENT`**: Permite ejecutar consultas de diagnóstico global sobre el estado de la replicación.
+* **`SLAVE MONITOR`** *(Requerido en MariaDB 10.5+)*: Permite ejecutar `SHOW SLAVE STATUS` en los nodos réplica sin requerir privilegios de superusuario (`SUPER`).
+* **`PROCESS`**: Permite al usuario de la aplicación ejecutar la sentencia `SHOW ENGINE INNODB STATUS` para extraer las métricas LSN de la memoria compartida y del motor transaccional en tiempo real.
+
+```sql
+GRANT REPLICATION CLIENT, SLAVE MONITOR, PROCESS ON *.* TO 'banco_user'@'%';
+FLUSH PRIVILEGES;
+```
 
 --- ## Glosario de Conceptos y Abreviaciones
 
