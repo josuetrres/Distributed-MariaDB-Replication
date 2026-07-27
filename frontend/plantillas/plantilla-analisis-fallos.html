@@ -6,18 +6,18 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700&display=swap');
         
-        body { 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-            margin: 40px auto; 
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 40px auto;
             max-width: 1100px;
-            color: #0f172a; 
-            line-height: 1.6; 
+            color: #0f172a;
+            line-height: 1.6;
             background: #ffffff;
             padding: 0 30px;
         }
-        h1, h2, h3 { 
+        h1, h2, h3 {
             font-family: 'Outfit', 'Inter', sans-serif;
-            color: #0052cc; 
+            color: #0052cc;
             margin-top: 30px;
             margin-bottom: 12px;
             letter-spacing: -0.01em;
@@ -25,68 +25,68 @@
         h1 { font-size: 1.8rem; font-weight: 700; }
         h2 { font-size: 1.3rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
         
-        .header-info { 
+        .header-info {
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             border: 1px solid #cbd5e1;
-            border-left: 6px solid #0052cc; 
-            padding: 24px 30px; 
-            margin-bottom: 30px; 
-            border-radius: 12px; 
+            border-left: 6px solid #0052cc;
+            padding: 24px 30px;
+            margin-bottom: 30px;
+            border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
         }
         
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 20px 0 30px 0; 
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0 30px 0;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             overflow: hidden;
         }
-        th, td { 
-            padding: 14px 18px; 
-            text-align: left; 
-            border-bottom: 1px solid #f1f5f9; 
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
             font-size: 0.95rem;
         }
-        th { 
-            background-color: #f8fafc; 
-            color: #475569; 
-            font-weight: 600; 
-            font-size: 0.82rem; 
-            text-transform: uppercase; 
+        th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.82rem;
+            text-transform: uppercase;
             letter-spacing: 0.05em;
             border-bottom: 2px solid #e2e8f0;
         }
         tr:hover td { background-color: #fcfcfd; }
         
-        .box { 
-            border: 1px solid #e2e8f0; 
-            padding: 20px; 
-            background: #f8fafc; 
-            margin-bottom: 25px; 
-            border-radius: 10px; 
+        .box {
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            background: #f8fafc;
+            margin-bottom: 25px;
+            border-radius: 10px;
             border-left: 4px solid #38bdf8;
         }
         
-        .btn-print { 
-            background: linear-gradient(135deg, #0052cc 0%, #003d9b 100%); 
-            color: white; 
-            border: none; 
-            padding: 12px 24px; 
-            cursor: pointer; 
-            font-size: 0.95rem; 
+        .btn-print {
+            background: linear-gradient(135deg, #0052cc 0%, #003d9b 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 0.95rem;
             font-weight: 600;
             font-family: 'Outfit', sans-serif;
-            border-radius: 8px; 
+            border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 82, 204, 0.25);
             transition: all 0.2s;
             margin-bottom: 20px;
         }
         .btn-print:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 82, 204, 0.35); }
-        @media print { 
+        @media print {
             body { margin: 0; padding: 20px; }
-            .btn-print { display: none; } 
+            .btn-print { display: none; }
             .header-info, .box, table { box-shadow: none !important; }
         }
     </style>
@@ -155,19 +155,19 @@
             <td><strong>Consistencia (C)</strong></td>
             <td>Restricción CHECK y suma total del dinero circulante (Invariante).</td>
             <td>Suma total del banco verificado: <strong id="inv-total">Consultando API...</strong></td>
-            <td><strong id="status-consistencia" style="color: #2ed573;">[ ✓ VERIFICADO ]</strong></td>
+            <td><strong id="status-consistencia" style="color: #2ed573;">[ VERIFICADO ]</strong></td>
         </tr>
         <tr>
             <td><strong>Aislamiento (I)</strong></td>
             <td>Bloqueos de fila (SELECT ... FOR UPDATE) ante peticiones concurrentes.</td>
             <td>No se detectan lecturas sucias (dirty reads) ni pérdidas de actualización en las API.</td>
-            <td><strong style="color: #2ed573;">[ ✓ PASÓ ]</strong></td>
+            <td><strong style="color: #2ed573;">[ PASÓ ]</strong></td>
         </tr>
         <tr>
             <td><strong>Durabilidad (D) & WAL</strong></td>
             <td>InnoDB Redo Log (`innodb_flush_log_at_trx_commit=1`) y proceso REDO tras reinicio.</td>
             <td>Log de transacciones InnoDB escribiendo activamente (LSN en progreso).</td>
-            <td><strong id="status-durabilidad" style="color: #2ed573;">[ ✓ PASÓ ]</strong></td>
+            <td><strong id="status-durabilidad" style="color: #2ed573;">[ PASÓ ]</strong></td>
         </tr>
     </table>
 
@@ -190,10 +190,10 @@
                     if (ipEl && statusEl) {
                         if (n.estado.activo && n.estado.info && n.estado.info.datos) {
                             ipEl.innerText = n.estado.info.datos.dbMasterHost || (n.id === 1 ? 'localhost / LAN Master' : 'LAN Replica');
-                            statusEl.innerHTML = `<span style="color: #2ed573; font-weight: bold;">🟢 ACTIVO (${n.estado.info.datos.nombreNodo || 'OK'})</span>`;
+                            statusEl.innerHTML = `<span style="color: #2ed573; font-weight: bold;"> ACTIVO (${n.estado.info.datos.nombreNodo || 'OK'})</span>`;
                         } else {
                             ipEl.innerText = 'No accesible en LAN';
-                            statusEl.innerHTML = `<span style="color: #ff4757; font-weight: bold;">🔴 INACTIVO / APAGADO</span>`;
+                            statusEl.innerHTML = `<span style="color: #ff4757; font-weight: bold;"> INACTIVO / APAGADO</span>`;
                         }
                     }
                 });
@@ -206,13 +206,13 @@
                 document.getElementById('tx-aislamiento').innerText = tx.nivelAislamiento || 'READ_COMMITTED';
                 
                 if (tx.estado && (tx.estado.includes('REVERTIDA') || tx.errorSimulado)) {
-                    document.getElementById('tx-operacion-estado').innerHTML = `<strong style="color: #ff4757;">⚠️ PRUEBA DE FALLA ACORDADA: ${tx.mensaje || 'Transacción interrumpida para probar UNDO'}</strong>`;
+                    document.getElementById('tx-operacion-estado').innerHTML = `<strong style="color: #ff4757;"> PRUEBA DE FALLA ACORDADA: ${tx.mensaje || 'Transacción interrumpida para probar UNDO'}</strong>`;
                     document.getElementById('obs-atomicidad').innerText = 'El motor MariaDB detectó el fallo y ejecutó con éxito el proceso UNDO Log. Saldo restaurado intacto.';
-                    document.getElementById('status-atomicidad').innerHTML = '<span style="color: #2ed573;">[ ✓ PASÓ (UNDO EXITOSO) ]</span>';
+                    document.getElementById('status-atomicidad').innerHTML = '<span style="color: #2ed573;">[ PASÓ (UNDO EXITOSO) ]</span>';
                 } else {
-                    document.getElementById('tx-operacion-estado').innerHTML = `<strong style="color: #2ed573;">✅ TRANSFERENCIA COMPLETADA: ${tx.mensaje || 'Éxito en persistencia WAL'}</strong>`;
+                    document.getElementById('tx-operacion-estado').innerHTML = `<strong style="color: #2ed573;"> TRANSFERENCIA COMPLETADA: ${tx.mensaje || 'Éxito en persistencia WAL'}</strong>`;
                     document.getElementById('obs-atomicidad').innerText = 'Transacción atómica completada (COMMIT) y volcada a disco mediante Redo Log.';
-                    document.getElementById('status-atomicidad').innerHTML = '<span style="color: #2ed573;">[ ✓ PASÓ (COMMIT EXITOSO) ]</span>';
+                    document.getElementById('status-atomicidad').innerHTML = '<span style="color: #2ed573;">[ PASÓ (COMMIT EXITOSO) ]</span>';
                 }
             }
 

@@ -1,5 +1,4 @@
-/**
- * Lógica Principal del Dashboard de Transacciones Bancarias ACID (Español)
+/** * Lógica Principal del Dashboard de Transacciones Bancarias ACID (Español)
  */
 document.addEventListener('DOMContentLoaded', () => {
     inicializarApp();
@@ -117,7 +116,7 @@ async function cargarEstadoNodosRealTime() {
                     <td><strong>${info.nombreNodo || ('API ' + n.id)}</strong><br><small style="color: var(--text-muted);">${n.config}</small></td>
                     <td><code style="background: rgba(0, 82, 204, 0.06); color: var(--accent-blue); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(0, 82, 204, 0.15); display: inline-block;">${dbDesc}</code></td>
                     <td>${n.rol}</td>
-                    <td><span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.12); color: #059669; border: 1px solid rgba(5, 150, 105, 0.3);">🟢 ACTIVO</span></td>
+                    <td><span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.12); color: #059669; border: 1px solid rgba(5, 150, 105, 0.3);"> ACTIVO</span></td>
                     <td><code>LSN: ${info.lsn || n.estado.info.lsn || 'Activo'}</code></td>
                 `;
             } else {
@@ -125,7 +124,7 @@ async function cargarEstadoNodosRealTime() {
                     <td><strong>Dispositivo PC${n.id}</strong><br><small style="color: var(--text-muted);">${n.config}</small></td>
                     <td><code>—</code></td>
                     <td>${n.rol}</td>
-                    <td><span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.12); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3);">🔴 INACTIVO / APAGADO</span></td>
+                    <td><span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.12); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3);"> INACTIVO / APAGADO</span></td>
                     <td><small style="color: var(--text-muted);">Sin conexión LAN</small></td>
                 `;
             }
@@ -376,9 +375,9 @@ async function cargarEstadoReplicacionRealTime() {
         // 2. Render Tabla Verificación de Lectura Distribuida (Filas = Nodos BD)
         const checkSincronizado = (total, suma) => {
             if (total !== '0' && total !== 'Error lectura' && suma !== 'Error lectura') {
-                return `<span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.15); color: #059669;">🟢 100% Sincronizado</span>`;
+                return `<span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.15); color: #059669;"> 100% Sincronizado</span>`;
             }
-            return `<span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.15); color: #dc2626;">🔴 Error / Desconectado</span>`;
+            return `<span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.15); color: #dc2626;"> Error / Desconectado</span>`;
         };
 
         tbodyLectura.innerHTML = `
@@ -437,7 +436,7 @@ window.switchDbSubTab = function(btn, tabId) {
 
 function renderCuentasTable(cuentas) {
     if (!cuentas || cuentas.length === 0) {
-        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;">🚫 No hay cuentas registradas en este nodo.</p>`;
+        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;"> No hay cuentas registradas en este nodo.</p>`;
     }
     let html = `
         <div class="table-container" style="max-height: 280px; overflow-y: auto; margin-top: 8px; border: 1px solid #e2e8f0; background: #fff;">
@@ -473,7 +472,7 @@ function renderCuentasTable(cuentas) {
 
 function renderTransaccionesTable(transacciones) {
     if (!transacciones || transacciones.length === 0) {
-        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;">🚫 No hay transacciones registradas en este nodo.</p>`;
+        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;"> No hay transacciones registradas en este nodo.</p>`;
     }
     let html = `
         <div class="table-container" style="max-height: 280px; overflow-y: auto; margin-top: 8px; border: 1px solid #e2e8f0; background: #fff;">
@@ -521,7 +520,7 @@ function renderTransaccionesTable(transacciones) {
 
 function renderWalTable(wal) {
     if (!wal || wal.length === 0) {
-        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;">🚫 No hay registros WAL en este nodo.</p>`;
+        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;"> No hay registros WAL en este nodo.</p>`;
     }
     let html = `
         <div class="table-container" style="max-height: 280px; overflow-y: auto; margin-top: 8px; border: 1px solid #e2e8f0; background: #fff;">
@@ -614,7 +613,7 @@ window.consultarConsolaBd = async function(nodoIndex) {
                 // El contenedor MariaDB respondió pero hubo un error de conexión JDBC interno o tabla inexistente
                 explorerHtml += `
                     <div class="db-error-banner">
-                        <span class="db-error-icon">⚠️</span>
+                        <span class="db-error-icon"></span>
                         <div style="flex-grow: 1;">
                             <strong style="display: block; font-size: 0.95rem;">Error en Consultas de Base de Datos</strong>
                             <div class="db-error-details">${dbData.errorConexion}</div>
@@ -626,7 +625,7 @@ window.consultarConsolaBd = async function(nodoIndex) {
                     
                     <!-- Pestaña única para ver el JSON completo del error -->
                     <div class="db-subtabs" style="margin-top: 15px;">
-                        <button class="db-subtab-btn active" onclick="window.switchDbSubTab(this, 'raw-json')">🔍 JSON de Respuesta</button>
+                        <button class="db-subtab-btn active" onclick="window.switchDbSubTab(this, 'raw-json')">JSON de Respuesta</button>
                     </div>
                     <div class="db-tab-content" id="db-content-raw-json" style="display: block;">
                         <pre style="margin: 0; font-family: 'Fira Code', monospace; font-size: 0.8rem; background: #ffffff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; overflow: auto; max-height: 250px; color: #334155;">${JSON.stringify(dbData, null, 2)}</pre>
@@ -645,10 +644,10 @@ window.consultarConsolaBd = async function(nodoIndex) {
                 explorerHtml += `
                     <!-- Sub-Pestañas de Selección -->
                     <div class="db-subtabs">
-                        <button class="db-subtab-btn active" onclick="window.switchDbSubTab(this, 'cuentas')">💳 Cuentas y Saldos (${cuentas.length})</button>
-                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'transacciones')">📊 Transacciones (${transacciones.length})</button>
-                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'wal')">📝 Bitácora WAL (${wal.length})</button>
-                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'raw-json')">🔍 JSON Bruto</button>
+                        <button class="db-subtab-btn active" onclick="window.switchDbSubTab(this, 'cuentas')">Cuentas y Saldos (${cuentas.length})</button>
+                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'transacciones')">Transacciones (${transacciones.length})</button>
+                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'wal')">Bitácora WAL (${wal.length})</button>
+                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'raw-json')">JSON Bruto</button>
                     </div>
 
                     <!-- Contenido Cuentas -->
@@ -680,7 +679,7 @@ window.consultarConsolaBd = async function(nodoIndex) {
             const errText = res.error || 'Nodo inalcanzable o sin respuesta de la API';
             const errorHtml = `
                 <div class="db-error-banner">
-                    <span class="db-error-icon">❌</span>
+                    <span class="db-error-icon"></span>
                     <div style="flex-grow: 1;">
                         <strong style="display: block; font-size: 0.95rem;">Error de Comunicación con el Nodo ${nodoIndex}</strong>
                         <div class="db-error-details">${errText}</div>
@@ -702,7 +701,7 @@ window.consultarConsolaBd = async function(nodoIndex) {
     } catch (e) {
         const errorHtml = `
             <div class="db-error-banner">
-                <span class="db-error-icon">💥</span>
+                <span class="db-error-icon"></span>
                 <div style="flex-grow: 1;">
                     <strong style="display: block; font-size: 0.95rem;">Excepción Inesperada en el Cliente</strong>
                     <div class="db-error-details">${e.message}</div>

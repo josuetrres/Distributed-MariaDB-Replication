@@ -11,21 +11,21 @@
     <!-- Encabezado Principal -->
     <header class="app-header">
         <div class="app-title">
-            <h1>🏛️ Banco ACID - Sistema Distribuido de Transacciones</h1>
+            <h1>Banco ACID - Sistema Distribuido de Transacciones</h1>
             <p>Demostración de Write-Ahead Logging (WAL), Procesos REDO/UNDO y Replicación GTID en MariaDB</p>
         </div>
         <div>
             <span id="nodo-actual" class="badge-nodo">Nodo Activo: Conectando...</span>
-            <button id="btn-refrescar" class="btn-ghost" style="margin-left: 12px;">🔄 Refrescar</button>
+            <button id="btn-refrescar" class="btn-ghost" style="margin-left: 12px;">Refrescar</button>
         </div>
     </header>
 
     <div class="container">
         <!-- Barra de Pestañas de Navegación -->
         <div class="tabs-container">
-            <button id="tab-btn-operaciones" class="tab-btn active" onclick="cambiarPestaña('operaciones')">💳 Operaciones y Resultados Bancarios</button>
-            <button id="tab-btn-tecnicos" class="tab-btn" onclick="cambiarPestaña('tecnicos')">⚙️ Monitoreo y Detalles Técnicos (ACID / WAL / LSN)</button>
-            <button id="tab-btn-replicacion" class="tab-btn" onclick="cambiarPestaña('replicacion')">🗄️ Bases de Datos y Replicación (Master vs Réplicas)</button>
+            <button id="tab-btn-operaciones" class="tab-btn active" onclick="cambiarPestaña('operaciones')">Operaciones y Resultados Bancarios</button>
+            <button id="tab-btn-tecnicos" class="tab-btn" onclick="cambiarPestaña('tecnicos')">Monitoreo y Detalles Técnicos (ACID / WAL / LSN)</button>
+            <button id="tab-btn-replicacion" class="tab-btn" onclick="cambiarPestaña('replicacion')">Bases de Datos y Replicación (Master vs Réplicas)</button>
         </div>
 
         <!-- SECCIÓN 1: OPERACIONES Y RESULTADOS (Pestaña Por Defecto) -->
@@ -34,7 +34,7 @@
             <!-- Card: Ejecución de Transacciones ACID -->
             <div class="card">
                 <div class="card-title">
-                    <span>💸 Transferencia Bancaria ACID</span>
+                    <span>Transferencia Bancaria ACID</span>
                     <span style="font-size: 0.8rem; color: var(--accent-orange);">Master (PC1)</span>
                 </div>
                 <form id="form-transferencia">
@@ -53,16 +53,16 @@
 
                     <div class="checkbox-group">
                         <input type="checkbox" id="simular-error">
-                        <label for="simular-error">⚠️ Simular Falla / Excepción Repentina (Probar proceso UNDO Rollback)</label>
+                        <label for="simular-error">Simular Falla / Excepción Repentina (Probar proceso UNDO Rollback)</label>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="margin-top: 15px;">⚡ Ejecutar Transacción Bancaria</button>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Ejecutar Transacción Bancaria</button>
                 </form>
             </div>
 
             <!-- Card: Cuentas Bancarias y Consistencia -->
             <div class="card">
                 <div class="card-title">
-                    <span>💳 Cuentas Bancarias y Saldos</span>
+                    <span>Cuentas Bancarias y Saldos</span>
                     <span id="saldo-invariante" style="font-size: 0.9rem; color: var(--accent-green);">$0.00 USD</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
@@ -87,7 +87,7 @@
             <!-- Card: Historial de Transacciones Confirmadas/Revertidas -->
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
-                    <span>📊 Resumen y Resultados de Transacciones Procesadas</span>
+                    <span>Resumen y Resultados de Transacciones Procesadas</span>
                 </div>
                 <div class="table-container" style="max-height: 220px; overflow-y: auto;">
                     <table>
@@ -115,7 +115,7 @@
             <!-- Card: Monitoreo en Tiempo Real de los 3 Nodos LAN -->
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
-                    <span>🖥️ Estado en Tiempo Real de los 3 Nodos en la Red LAN</span>
+                    <span>Estado en Tiempo Real de los 3 Nodos en la Red LAN</span>
                     <span style="font-size: 0.8rem; color: var(--accent-blue);">Balanceo Round Robin Activo</span>
                 </div>
                 <div class="table-container" style="max-height: 280px; overflow-y: auto;">
@@ -139,7 +139,7 @@
             <!-- Card: Bitácora WAL de Aplicación -->
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
-                    <span>📜 Bitácora WAL de Transacciones (Secuencia de Fases)</span>
+                    <span>Bitácora WAL de Transacciones (Secuencia de Fases)</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
                     Muestra los pasos registrados por el algoritmo WAL: <strong>INICIADA &rarr; WAL_GRABADO_BUFFER &rarr; REDO_PREPARADO &rarr; COMMIT_FLUSH / ROLLBACK_EJECUTADO</strong>.
@@ -168,7 +168,7 @@
             <!-- Card: Comparativa de Topología y Estado (Master vs Réplicas) -->
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
-                    <span>🗄️ Topología y Estado de Replicación MariaDB GTID (Master vs Réplicas)</span>
+                    <span>Topología y Estado de Replicación MariaDB GTID (Master vs Réplicas)</span>
                     <span style="font-size: 0.8rem; color: var(--accent-purple);">Sincronización Asíncrona / GTID Activo</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
@@ -194,7 +194,7 @@
             <!-- Card: Verificación de Lectura en Tiempo Real desde cada BD -->
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
-                    <span>🔍 Verificación de Lectura Distribuida (Consistencia de Datos en Vivo)</span>
+                    <span>Verificación de Lectura Distribuida (Consistencia de Datos en Vivo)</span>
                     <span style="font-size: 0.8rem; color: var(--accent-green);">Prueba de Lectura Independiente por Nodo</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
@@ -222,7 +222,7 @@
             <div class="card" style="grid-column: 1 / -1; border: 1px solid var(--border-light); background: var(--bg-card);">
                 <div class="card-title" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <span style="color: var(--text-main); font-weight: 600;">💻 Explorador de Datos en Vivo (Por Nodo de BD)</span>
+                        <span style="color: var(--text-main); font-weight: 600;"> Explorador de Datos en Vivo (Por Nodo de BD)</span>
                         <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-top: 4px;">
                             Selecciona una instancia para extraer los registros reales de las tablas y visualizarlos en tablas formateadas o en formato JSON original.
                         </div>
@@ -234,26 +234,23 @@
 
                 <!-- Botones de Acción de Consulta -->
                 <div style="display: flex; gap: 12px; margin: 12px 0; flex-wrap: wrap;">
-                    <button class="btn btn-primary" onclick="consultarConsolaBd(1)" style="background: var(--accent-blue); font-size: 0.85rem; padding: 8px 16px;">
-                        🟢 Leer BD Master (PC1 - 192.168.1.93)
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(1)" style="background: var(--accent-blue); font-size: 0.85rem; padding: 8px 16px;">Leer BD Master (PC1 - 192.168.1.93)
                     </button>
-                    <button class="btn btn-primary" onclick="consultarConsolaBd(2)" style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">
-                        🟣 Leer BD Réplica 1 (PC2 - 192.168.1.8)
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(2)" style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">Leer BD Réplica 1 (PC2 - 192.168.1.8)
                     </button>
-                    <button class="btn btn-primary" onclick="consultarConsolaBd(3)" style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">
-                        🟣 Leer BD Réplica 2 (PC3 - 192.168.1.30)
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(3)" style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">Leer BD Réplica 2 (PC3 - 192.168.1.30)
                     </button>
                 </div>
 
                 <!-- Ventana de Consola / Salida de Datos -->
                 <div id="consola-bd-wrapper" style="background: rgba(248, 250, 252, 0.95); border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; min-height: 200px; max-height: 500px; overflow: auto; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
-                    <pre id="consola-bd-output" style="margin: 0; font-family: 'Fira Code', 'Courier New', Courier, monospace; font-size: 0.82rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-all;">// ⚡ Explorador Preparado (Tablas y JSON).
+                    <pre id="consola-bd-output" style="margin: 0; font-family: 'Fira Code', 'Courier New', Courier, monospace; font-size: 0.82rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-all;">// Explorador Preparado (Tablas y JSON).
 // Pulsa en cualquiera de los botones superiores para ejecutar la lectura directa a la base de datos de ese PC específico...
 // Se consultarán las siguientes tablas en vivo:
-//   1. Servidor MariaDB (Host, Server ID, GTID, Rol de Replicación)
-//   2. Tabla 'cuentas' (Saldos en tiempo real - ¡Ahora en Tablas Bonitas! 💳)
-//   3. Tabla 'transacciones' (Historial de transferencias persistidas)
-//   4. Tabla 'bitacora_wal' (Logs Write-Ahead Logging confirmados)</pre>
+// 1. Servidor MariaDB (Host, Server ID, GTID, Rol de Replicación)
+// 2. Tabla 'cuentas' (Saldos en tiempo real - ¡Ahora en Tablas Bonitas! )
+// 3. Tabla 'transacciones' (Historial de transferencias persistidas)
+// 4. Tabla 'bitacora_wal' (Logs Write-Ahead Logging confirmados)</pre>
                 </div>
             </div>
 
