@@ -39,6 +39,67 @@ flowchart TD
     end
 ```
 
+### 2.1 Diagrama de Componentes (Nivel API, DB y Replicación)
+
+Este diagrama representa los bloques y componentes lógicos del sistema, la separación de responsabilidades y el flujo de replicación interno:
+
+```mermaid
+flowchart TB
+    subgraph Capa_Cliente [Capa Cliente - Interfaz Web]
+        UI[Formularios & Panel Operativo]
+        DBExp[Explorador de Base de Datos Dinámico]
+    end
+
+    subgraph Capa_Middleware [Capa Middleware - Balanceo]
+        Nginx[Balanceador Nginx PC1:80]
+    end
+
+    subgraph Capa_Backend [Capa Backend - API Spring Boot]
+        RestCtrl[Controladores REST]
+        TxService[Servicio de Transacciones / Auditoría WAL]
+        JpaRepo[Repositorios JPA / Hibernate]
+        ConnPool[Hikari Connection Pool]
+    end
+
+    subgraph Capa_Datos_Master [Capa de Datos - MariaDB Master PC1]
+        subgraph Motor_InnoDB_Master [Motor InnoDB]
+            BufPoolM[Buffer Pool & Undo/Redo Logs]
+            TablesM[(Tablas de Datos Físicas)]
+        end
+        Binlog[Log Binario - Registro GTID]
+    end
+
+    subgraph Capa_Datos_Replica [Capa de Datos - MariaDB Réplica PC2 / PC3]
+        subgraph Motor_InnoDB_Replica [Motor InnoDB Local]
+            BufPoolR[Buffer Pool]
+            TablesR[(Tablas Réplica)]
+        end
+        IOThread[Replica I/O Thread]
+        RelayLog[Relay Log Local]
+        SQLThread[SQL Apply Thread]
+    end
+
+    %% Flujos e Interacciones
+    UI -- Peticiones HTTP POST/GET --> Nginx
+    DBExp -- Peticiones HTTP GET (Auditoría) --> Nginx
+    
+    Nginx -- Balanceo Round Robin --> RestCtrl
+    RestCtrl --> TxService
+    TxService --> JpaRepo
+    JpaRepo --> ConnPool
+    
+    %% JDBC Connections
+    ConnPool -- JDBC Escritura & Lectura --> Motor_InnoDB_Master
+    ConnPool -- JDBC Lectura Local --> Motor_InnoDB_Replica
+    
+    %% Flujo Interno de Replicación MariaDB
+    Motor_InnoDB_Master -.-> Binlog
+    Binlog -- Sincronización GTID --> IOThread
+    IOThread --> RelayLog
+    RelayLog --> SQLThread
+    SQLThread --> Motor_InnoDB_Replica
+```
+
 ---
 
 ## 3. Demostración y Verificación de las Propiedades ACID
