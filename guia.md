@@ -18,7 +18,7 @@ El frontend está estructurado en tres secciones principales o pestañas, diseñ
 
 ### 1. Pestaña 💸 Operaciones y Transacciones
 Enfocada en simular el uso transaccional diario de un sistema financiero:
-*   **Formulario de Transferencia Bancaria:** Permite realizar transferencias entre cuentas seleccionando el **Nivel de Aislamiento** y la posibilidad de **Simular una Falla Repentina** (deteniendo la transacción justo antes del Commit para probar el mecanismo `UNDO`/Rollback).
+*   **Formulario de Transferencia Bancaria:** Permite realizar transferencias entre cuentas y ofrece la posibilidad de **Simular una Falla Repentina** (deteniendo la transacción justo antes del Commit para probar el mecanismo `UNDO`/Rollback).
 *   **Tabla de Cuentas Bancarias:** Muestra en vivo los saldos de los clientes. Incluye el cálculo en tiempo real del **Invariante de Consistencia** (la suma total siempre debe dar `$165,000.00 USD`).
 *   **Historial de Transacciones:** Registra cada intento de transferencia con su GUID, cuentas involucradas, monto, estado (ej. `COMPLETADA`, `REVERTIDA_FALLA`) y qué nodo del clúster balanceó la petición.
 

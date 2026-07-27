@@ -185,7 +185,7 @@ async function manejarTransferenciaSubmit(e) {
     const origenId = parseInt(document.getElementById('cuenta-origen').value);
     const destinoId = parseInt(document.getElementById('cuenta-destino').value);
     const monto = parseFloat(document.getElementById('monto').value);
-    const nivelAislamiento = document.getElementById('nivel-aislamiento').value;
+    const nivelAislamiento = 'READ_COMMITTED';
     const simularError = document.getElementById('simular-error').checked;
 
     if (origenId === destinoId) {
@@ -410,10 +410,155 @@ async function cargarEstadoReplicacionRealTime() {
     }
 }
 
+window.switchDbSubTab = function(btn, tabId) {
+    // 1. Desmarcar todos los botones hermanos
+    const tabRow = btn.parentElement;
+    const buttons = tabRow.querySelectorAll('.db-subtab-btn');
+    buttons.forEach(b => {
+        b.classList.remove('active');
+    });
+    
+    // 2. Activar el botón pulsado
+    btn.classList.add('active');
+    
+    // 3. Ocultar todos los contenedores de contenido en el explorador
+    const explorer = tabRow.parentElement;
+    const contents = explorer.querySelectorAll('.db-tab-content');
+    contents.forEach(c => {
+        c.style.display = 'none';
+    });
+    
+    // 4. Mostrar el contenido de la pestaña seleccionada
+    const target = explorer.querySelector(`#db-content-${tabId}`);
+    if (target) {
+        target.style.display = 'block';
+    }
+};
+
+function renderCuentasTable(cuentas) {
+    if (!cuentas || cuentas.length === 0) {
+        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;">🚫 No hay cuentas registradas en este nodo.</p>`;
+    }
+    let html = `
+        <div class="table-container" style="max-height: 280px; overflow-y: auto; margin-top: 8px; border: 1px solid #e2e8f0; background: #fff;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">ID</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Número Cuenta</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Titular</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Saldo Disponible</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    cuentas.forEach(c => {
+        const saldoFormatted = Number(c.saldo || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        html += `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">${c.id}</td>
+                <td style="padding: 10px 14px; font-size: 0.88rem;"><code>${c.numeroCuenta || 'N/A'}</code></td>
+                <td style="padding: 10px 14px; font-size: 0.88rem;">${c.titular || 'Desconocido'}</td>
+                <td style="padding: 10px 14px; font-size: 0.88rem;"><strong style="color: var(--accent-green);">${saldoFormatted} USD</strong></td>
+            </tr>
+        `;
+    });
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    return html;
+}
+
+function renderTransaccionesTable(transacciones) {
+    if (!transacciones || transacciones.length === 0) {
+        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;">🚫 No hay transacciones registradas en este nodo.</p>`;
+    }
+    let html = `
+        <div class="table-container" style="max-height: 280px; overflow-y: auto; margin-top: 8px; border: 1px solid #e2e8f0; background: #fff;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">ID</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">GUID Tx</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Origen</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Destino</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Monto</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Estado</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Nodo</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    transacciones.forEach(t => {
+        const montoFormatted = Number(t.monto || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        const shortGuid = t.guid ? `${t.guid.substring(0, 8)}...` : 'N/A';
+        
+        let tagClass = 'tag-iniciada';
+        if (t.estado === 'COMPLETADA') tagClass = 'tag-completada';
+        else if (t.estado && (t.estado.startsWith('REVERTIDA') || t.estado.startsWith('FALLA') || t.estado.startsWith('REVERTIDO'))) tagClass = 'tag-revertida';
+
+        html += `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">${t.id}</td>
+                <td style="padding: 10px 14px; font-size: 0.85rem;" title="${t.guid || ''}"><code>${shortGuid}</code></td>
+                <td style="padding: 10px 14px; font-size: 0.85rem;"><code>Cuenta #${t.origenId || 'N/A'}</code></td>
+                <td style="padding: 10px 14px; font-size: 0.85rem;"><code>Cuenta #${t.destinoId || 'N/A'}</code></td>
+                <td style="padding: 10px 14px; font-size: 0.88rem; font-weight: 600;">${montoFormatted}</td>
+                <td style="padding: 10px 14px;"><span class="tag ${tagClass}" style="font-size: 0.7rem; padding: 3px 8px;">${t.estado || 'INICIADA'}</span></td>
+                <td style="padding: 10px 14px; font-size: 0.8rem; color: var(--text-muted);">${t.nodo || 'N/A'}</td>
+            </tr>
+        `;
+    });
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    return html;
+}
+
+function renderWalTable(wal) {
+    if (!wal || wal.length === 0) {
+        return `<p style="padding: 20px; color: var(--text-muted); text-align: center; font-size: 0.9rem;">🚫 No hay registros WAL en este nodo.</p>`;
+    }
+    let html = `
+        <div class="table-container" style="max-height: 280px; overflow-y: auto; margin-top: 8px; border: 1px solid #e2e8f0; background: #fff;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">ID</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">GUID Tx</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Fase WAL</th>
+                        <th style="padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; color: var(--text-muted);">Detalles y Datos Reservados</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    wal.forEach(w => {
+        const shortGuid = w.guid ? `${w.guid.substring(0, 8)}...` : 'N/A';
+        html += `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">${w.id}</td>
+                <td style="padding: 10px 14px; font-size: 0.85rem;" title="${w.guid || ''}"><code>${shortGuid}</code></td>
+                <td style="padding: 10px 14px;"><span class="tag tag-wal" style="font-size: 0.7rem; padding: 3px 8px;">${w.faseWal || 'WAL'}</span></td>
+                <td style="padding: 10px 14px; font-size: 0.8rem; font-family: monospace; color: var(--text-secondary);">${w.detalles || 'N/A'}</td>
+            </tr>
+        `;
+    });
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    return html;
+}
+
 window.consultarConsolaBd = async function(nodoIndex) {
-    const output = document.getElementById('consola-bd-output');
+    const wrapper = document.getElementById('consola-bd-wrapper');
     const badge = document.getElementById('consola-bd-badge');
-    if (!output) return;
+    if (!wrapper) return;
 
     const nombres = {
         1: 'MariaDB Master (PC1 - 192.168.1.93)',
@@ -427,31 +572,147 @@ window.consultarConsolaBd = async function(nodoIndex) {
         badge.style.color = '#d97706';
     }
 
-    output.innerText = `// [TIMESTAMP: ${new Date().toLocaleTimeString()}] Conectando por JDBC al contendor de base de datos del Nodo ${nodoIndex} (${nombres[nodoIndex]})...\n// Ejecutando: SELECT * FROM cuentas;\n// Ejecutando: SELECT * FROM transacciones;\n// Ejecutando: SELECT * FROM bitacora_wal;\n// Esperando respuesta JSON del servidor...`;
+    // Mostrar estado de carga en un pre bloque
+    wrapper.innerHTML = `<pre id="consola-bd-output" style="margin: 0; font-family: 'Fira Code', 'Courier New', Courier, monospace; font-size: 0.82rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-all;">// [TIMESTAMP: ${new Date().toLocaleTimeString()}] Conectando por JDBC al contenedor de base de datos del Nodo ${nodoIndex} (${nombres[nodoIndex]})...\n// Ejecutando: SELECT * FROM cuentas;\n// Ejecutando: SELECT * FROM transacciones;\n// Ejecutando: SELECT * FROM bitacora_wal;\n// Esperando respuesta del servidor...</pre>`;
 
     try {
         const res = await ApiService.obtenerDatosBdNodo(nodoIndex);
         if (res.activo && res.datos) {
-            output.innerText = JSON.stringify(res.datos, null, 2);
+            const dbData = res.datos;
+            const server = dbData.servidorMariaDB || {};
+            
             if (badge) {
-                badge.innerText = `Conectado a: ${nombres[nodoIndex]} | JSON Recibido OK`;
+                badge.innerText = `Conectado a: ${nombres[nodoIndex]}`;
                 badge.style.background = 'rgba(5, 150, 105, 0.15)';
                 badge.style.color = '#059669';
             }
-            mostrarToast(`Datos leídos correctamente desde ${nombres[nodoIndex]}`, false);
+
+            // Formatear información del rol del servidor
+            const isReadOnly = server.readOnly === "1";
+            const roleText = isReadOnly ? "RÉPLICA (Solo Lectura)" : "MASTER (Lectura / Escritura)";
+            const roleColor = isReadOnly ? "var(--accent-purple)" : "var(--accent-blue)";
+            const roleBg = isReadOnly ? "var(--accent-purple-light)" : "var(--accent-blue-light)";
+            
+            const roText = isReadOnly ? "SÍ" : "NO";
+            const roColor = isReadOnly ? "var(--accent-purple)" : "var(--accent-green)";
+            const roBg = isReadOnly ? "var(--accent-purple-light)" : "var(--accent-green-light)";
+
+            // Construir HTML del Explorador de Base de Datos
+            let explorerHtml = `
+                <div class="db-explorer">
+                    <!-- Barra de Info del Servidor -->
+                    <div class="db-info-bar">
+                        <div class="db-info-item"><strong>Host DB:</strong> <span style="font-family: monospace;">${server.hostname || 'Desconocido'}</span></div>
+                        <div class="db-info-item"><strong>ID Servidor:</strong> <span class="tag" style="background: #e2e8f0; color: #334155; font-size: 0.75rem; padding: 2px 8px; text-transform: none; font-family: monospace; font-weight: 600;">${server.serverId || 'N/A'}</span></div>
+                        <div class="db-info-item"><strong>Rol:</strong> <span class="tag" style="background: ${roleBg}; color: ${roleColor}; font-size: 0.75rem; padding: 2px 8px; text-transform: none;">${roleText}</span></div>
+                        <div class="db-info-item"><strong>Solo Lectura:</strong> <span class="tag" style="background: ${roBg}; color: ${roColor}; font-size: 0.75rem; padding: 2px 8px; text-transform: none;">${roText}</span></div>
+                        <div class="db-info-item"><strong>GTID Pos:</strong> <span style="font-family: monospace; font-size: 0.8rem; background: #e2e8f0; color: var(--text-primary); padding: 2px 6px; border-radius: 4px;">${server.gtidCurrentPos || 'N/A'}</span></div>
+                    </div>
+            `;
+
+            if (dbData.errorConexion) {
+                // El contenedor MariaDB respondió pero hubo un error de conexión JDBC interno o tabla inexistente
+                explorerHtml += `
+                    <div class="db-error-banner">
+                        <span class="db-error-icon">⚠️</span>
+                        <div style="flex-grow: 1;">
+                            <strong style="display: block; font-size: 0.95rem;">Error en Consultas de Base de Datos</strong>
+                            <div class="db-error-details">${dbData.errorConexion}</div>
+                            <p style="font-size: 0.8rem; margin-top: 8px; color: var(--text-secondary); line-height: 1.4;">
+                                El contenedor de base de datos local del Nodo ${nodoIndex} está levantado y responde, pero la consulta SQL falló. Esto suele suceder si las tablas aún no se han creado en esta réplica por problemas de sincronización de replicación.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Pestaña única para ver el JSON completo del error -->
+                    <div class="db-subtabs" style="margin-top: 15px;">
+                        <button class="db-subtab-btn active" onclick="window.switchDbSubTab(this, 'raw-json')">🔍 JSON de Respuesta</button>
+                    </div>
+                    <div class="db-tab-content" id="db-content-raw-json" style="display: block;">
+                        <pre style="margin: 0; font-family: 'Fira Code', monospace; font-size: 0.8rem; background: #ffffff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; overflow: auto; max-height: 250px; color: #334155;">${JSON.stringify(dbData, null, 2)}</pre>
+                    </div>
+                `;
+                
+                wrapper.innerHTML = explorerHtml;
+                mostrarToast(`BD ${nombres[nodoIndex]} reporta un error`, true);
+            } else {
+                // Caso exitoso: renderizar las sub-pestañas con datos limpios
+                const tables = dbData.datosAlmacenadosEnBdLocal || {};
+                const cuentas = tables["1_tabla_cuentas"] || [];
+                const transacciones = tables["2_ultimas_transacciones"] || [];
+                const wal = tables["3_bitacora_wal"] || [];
+
+                explorerHtml += `
+                    <!-- Sub-Pestañas de Selección -->
+                    <div class="db-subtabs">
+                        <button class="db-subtab-btn active" onclick="window.switchDbSubTab(this, 'cuentas')">💳 Cuentas y Saldos (${cuentas.length})</button>
+                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'transacciones')">📊 Transacciones (${transacciones.length})</button>
+                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'wal')">📝 Bitácora WAL (${wal.length})</button>
+                        <button class="db-subtab-btn" onclick="window.switchDbSubTab(this, 'raw-json')">🔍 JSON Bruto</button>
+                    </div>
+
+                    <!-- Contenido Cuentas -->
+                    <div class="db-tab-content" id="db-content-cuentas" style="display: block;">
+                        ${renderCuentasTable(cuentas)}
+                    </div>
+
+                    <!-- Contenido Transacciones -->
+                    <div class="db-tab-content" id="db-content-transacciones" style="display: none;">
+                        ${renderTransaccionesTable(transacciones)}
+                    </div>
+
+                    <!-- Contenido WAL -->
+                    <div class="db-tab-content" id="db-content-wal" style="display: none;">
+                        ${renderWalTable(wal)}
+                    </div>
+
+                    <!-- Contenido JSON Bruto -->
+                    <div class="db-tab-content" id="db-content-raw-json" style="display: none;">
+                        <pre style="margin: 0; font-family: 'Fira Code', monospace; font-size: 0.8rem; background: #ffffff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; overflow: auto; max-height: 250px; color: #334155;">${JSON.stringify(dbData, null, 2)}</pre>
+                    </div>
+                `;
+                
+                wrapper.innerHTML = explorerHtml;
+                mostrarToast(`Datos leídos correctamente desde ${nombres[nodoIndex]}`, false);
+            }
         } else {
-            output.innerText = `// ERROR DE CONEXIÓN CON LA BASE DE DATOS DEL NODO ${nodoIndex}:\n\n` + JSON.stringify({ error: res.error || 'Nodo inalcanzable o sin respuesta', nodo: nodoIndex }, null, 2);
+            // El backend no está activo o falló completamente la conexión
+            const errText = res.error || 'Nodo inalcanzable o sin respuesta de la API';
+            const errorHtml = `
+                <div class="db-error-banner">
+                    <span class="db-error-icon">❌</span>
+                    <div style="flex-grow: 1;">
+                        <strong style="display: block; font-size: 0.95rem;">Error de Comunicación con el Nodo ${nodoIndex}</strong>
+                        <div class="db-error-details">${errText}</div>
+                        <p style="font-size: 0.8rem; margin-top: 8px; color: var(--text-secondary); line-height: 1.4;">
+                            No se pudo contactar con la API del Nodo ${nodoIndex}. Por favor, verifica que el contenedor <code>api${nodoIndex}-pc${nodoIndex}</code> esté encendido y que el puerto esté expuesto.
+                        </p>
+                    </div>
+                </div>
+            `;
+            wrapper.innerHTML = errorHtml;
+
             if (badge) {
-                badge.innerText = `Error en BD del Nodo ${nodoIndex}`;
+                badge.innerText = `Error en Nodo ${nodoIndex}`;
                 badge.style.background = 'rgba(220, 38, 38, 0.15)';
                 badge.style.color = '#dc2626';
             }
-            mostrarToast(`Error consultando BD del Nodo ${nodoIndex}`, true);
+            mostrarToast(`Error consultando Nodo ${nodoIndex}`, true);
         }
     } catch (e) {
-        output.innerText = `// ERROR INESPERADO AL CONSULTAR NODO ${nodoIndex}:\n` + e.message;
+        const errorHtml = `
+            <div class="db-error-banner">
+                <span class="db-error-icon">💥</span>
+                <div style="flex-grow: 1;">
+                    <strong style="display: block; font-size: 0.95rem;">Excepción Inesperada en el Cliente</strong>
+                    <div class="db-error-details">${e.message}</div>
+                </div>
+            </div>
+        `;
+        wrapper.innerHTML = errorHtml;
+
         if (badge) {
-            badge.innerText = `Error de Red / Excepción`;
+            badge.innerText = `Error de Excepción`;
             badge.style.background = 'rgba(220, 38, 38, 0.15)';
             badge.style.color = '#dc2626';
         }
