@@ -20,8 +20,14 @@ Enfocada en simular el uso transaccional diario de un sistema financiero:
 * **Tabla de Cuentas Bancarias:** Muestra en vivo los saldos de los clientes. Incluye el cálculo en tiempo real del **Invariante de Consistencia** (la suma total siempre debe dar `$165,000.00 USD`).
 * **Historial de Transacciones:** Registra cada intento de transferencia con su GUID, cuentas involucradas, monto, estado (ej. `COMPLETADA`, `REVERTIDA_FALLA`) y qué nodo del clúster balanceó la petición.
 
-### 2. Pestaña  Detalles Técnicos
-Muestra la telemetría interna del sistema operativo y de la base de datos:
+### 2. Pestaña Detalles Técnicos
+Muestra la telemetría interna del sistema operativo, cortacircuitos de red y de la base de datos:
+* **Panel de Circuit Breaker (Cortacircuitos en PC1):** 
+  * Monitorea activamente la salud y quórum del clúster ($\ge 2$ nodos activos requeridos).
+  * Estados:
+    * 🟢 **CLOSED (Pasando Tráfico):** $\ge 2$ nodos activos. Operación transaccional normal.
+    * 🔴 **OPEN (Bloqueando Tráfico):** $< 2$ nodos activos. Rechaza escrituras inmediatamente (HTTP 503) e inicia temporizador de **15 segundos**.
+    * 🟡 **HALF-OPEN (Verificando Nodos):** Tras 15s de cooldown, re-evalúa conectividad antes de retornar a `CLOSED` o re-abrir a `OPEN`.
 * **Estado de Nodos LAN:** Lista los 3 nodos de la red, mostrando su dirección IP, rol (`Master`, `Replica 1`, `Replica 2`), si están activos o caídos y su latencia de respuesta.
 * **Tarjeta de Estado del Motor InnoDB y Métricas WAL (LSN):** 
   * Visualiza en 3 cajas de métricas (KPIs) en tiempo real el **Log Sequence Number (LSN)** en memoria, la posición **Flushed Up To** (volcada físicamente a disco en `ib_logfile`) y el **Último Checkpoint Seguro**.
@@ -29,7 +35,7 @@ Muestra la telemetría interna del sistema operativo y de la base de datos:
 * **Plantilla de Análisis de Fallos:** Botón interactivo que despliega una guía para auditorías manuales post-falla.
 * **Bitácora WAL de Aplicación:** Tabla cronológica que registra cada paso del algoritmo Write-Ahead Logging de la capa Java (ej. `INICIADA`, `WAL_GRABADO_BUFFER`, `REDO_PREPARADO`, `COMMIT_FLUSH`, `ROLLBACK_EJECUTADO`).
 
-### 3. Pestaña  Bases de Datos y Replicación
+### 3. Pestaña Bases de Datos y Replicación
 Dedicada exclusivamente a inspeccionar el estado de la topología distribuida:
 * **Tabla de Topología MariaDB GTID:** Muestra la configuración de replicación de cada nodo (Server ID, posición GTID actual, host master conectado, modo lectura/escritura).
 * **Verificación de Lectura Distribuida:** Realiza consultas JDBC directas e independientes a la base de datos de cada PC para comparar cuántas cuentas y qué suma de saldo reporta cada nodo en tiempo real, garantizando la consistencia eventual o estricta.
@@ -60,9 +66,13 @@ Conjunto de características que garantizan la confiabilidad de las transaccione
     * `SERIALIZABLE`: El nivel más estricto. Bloquea las filas involucradas para que ninguna otra transacción las lea o modifique, previniendo lecturas fantasmas.
 * **D - Durabilidad (Durability):** Una vez que una transacción ha sido confirmada (`Commit`), sus efectos persistirán en el almacenamiento secundario (disco), incluso ante un apagón o fallo de energía. Esto se logra mediante la bitácora WAL.
 
+### Circuit Breaker (Cortacircuitos de Protección por Quórum)
+Patrón de diseño distribuido en PC1 que evalúa continuamente si existen al menos 2 de los 3 nodos activos. Previene inconsistencias catastróficas impidiendo que el sistema procese transferencias de escrituras cuando el clúster pierde el quórum mínimo.
+
 ### WAL (Write-Ahead Logging)
 * **Concepto:** Técnica que establece que los cambios en una base de datos deben ser escritos en un registro o bitácora en disco (*log file*) **antes** de que se apliquen realmente a las tablas físicas.
-* **Mecanismo de Recuperación:** * **REDO:** Si ocurre un fallo del sistema y el commit fue registrado en el log pero los datos no llegaron al disco, el sistema lee el log y "vuelve a aplicar" los cambios al reiniciar.
+* **Mecanismo de Recuperación:**
+    * **REDO:** Si ocurre un fallo del sistema y el commit fue registrado en el log pero los datos no llegaron al disco, el sistema lee el log y "vuelve a aplicar" los cambios al reiniciar.
     * **UNDO:** Si ocurre una falla antes de confirmar el commit, el log permite rastrear las operaciones incompletas y deshacerlas (Rollback) para evitar estados corruptos.
 
 ### LSN (Log Sequence Number)
@@ -84,31 +94,31 @@ Identificador único global que se asigna a cada transacción confirmada en un s
 ### Round Robin (Balanceador de Carga)
 Algoritmo de planificación utilizado por el servidor proxy Nginx en PC1 para distribuir las peticiones web HTTP entrantes de manera cíclica y equitativa entre los tres nodos del backend API en la LAN (API 1 &rarr; API 2 &rarr; API 3 &rarr; API 1...), optimizando el uso de recursos y evitando sobrecargar un solo nodo.
 
-### JDBC (Java Database Connectivity)
-API estándar de Java que permite a las aplicaciones conectarse a motores de bases de datos relacionales, ejecutar sentencias SQL y procesar los resultados. En este laboratorio, la API utiliza JDBC para conectarse de forma paralela e independiente a los contenedores MariaDB locales en PC1, PC2 y PC3.
-
 --- ## Arquitectura de Datos del Sistema
 
-El flujo de peticiones y replicación se representa de la siguiente manera:
+El flujo de peticiones, protección por Circuit Breaker y replicación se representa de la siguiente manera:
 
 ```mermaid
 flowchart TD
-    Cliente[Navegador/Frontend] -- HTTP (Petición) --> LB[Nginx Load Balancer PC1]
+    Cliente[Cliente / Interfaz Web] -- HTTP (Peticiones) --> CB_Gate{Circuit Breaker\nQuórum ≥ 2 Nodos?}
+    
+    CB_Gate -- OPEN: < 2 Nodos --> CB_Block[HTTP 503 Bloqueo Escrituras\nCooldown 15s -> HALF-OPEN]
+    CB_Gate -- CLOSED / HALF-OPEN --> LB[Nginx Load Balancer PC1:80]
     
     subgraph Balanceo Round Robin
-        LB -- Cíclico 1 --> API1[API Nodo 1 - PC1]
-        LB -- Cíclico 2 --> API2[API Nodo 2 - PC2]
-        LB -- Cíclico 3 --> API3[API Nodo 3 - PC3]
+        LB -- Cíclico 1 --> API1[API Nodo 1 - PC1:8081]
+        LB -- Cíclico 2 --> API2[API Nodo 2 - PC2:8082]
+        LB -- Cíclico 3 --> API3[API Nodo 3 - PC3:8083]
     end
 
     subgraph Capa de Datos Relacional
-        API1 -- JDBC --> DB_Master[(MariaDB Master PC1)]
-        API2 -- JDBC --> DB_Replica1[(MariaDB Replica 1 PC2)]
-        API3 -- JDBC --> DB_Replica2[(MariaDB Replica 2 PC3)]
+        API1 -- JDBC --> DB_Master[(MariaDB Master PC1:3306)]
+        API2 -- JDBC --> DB_Replica1[(MariaDB Replica 1 PC2:3306)]
+        API3 -- JDBC --> DB_Replica2[(MariaDB Replica 2 PC3:3306)]
         
         DB_Master -- Replicación GTID Asíncrona --> DB_Replica1
         DB_Master -- Replicación GTID Asíncrona --> DB_Replica2
     end
 ```
 
-Esta arquitectura garantiza que las operaciones críticas (escrituras) siempre se deriven o direccionen al Master, mientras que la lectura distribuida y auditoría del frontend pueda validar la sincronía de las réplicas en tiempo real.
+Esta arquitectura garantiza que las operaciones críticas (escrituras) siempre estén protegidas por el quórum del Circuit Breaker y se deriven al Master, mientras las réplicas permiten lectura distribuida y auditoría.

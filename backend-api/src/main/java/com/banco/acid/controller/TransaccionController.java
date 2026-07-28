@@ -6,6 +6,7 @@ import com.banco.acid.model.BitacoraWal;
 import com.banco.acid.model.Transaccion;
 import com.banco.acid.repository.BitacoraWalRepository;
 import com.banco.acid.repository.TransaccionRepository;
+import com.banco.acid.service.CircuitBreakerService;
 import com.banco.acid.service.TransaccionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class TransaccionController {
     private final TransaccionService transaccionService;
     private final TransaccionRepository transaccionRepository;
     private final BitacoraWalRepository bitacoraWalRepository;
+    private final CircuitBreakerService circuitBreakerService;
 
     @Value("${node.name:API1-PC1}")
     private String nombreNodo;
@@ -34,6 +36,17 @@ public class TransaccionController {
     @PostMapping("/transferir")
     public ResponseEntity<RespuestaSistema<Transaccion>> transferir(@Valid @RequestBody TransferenciaRequest request) {
         String txGuidTmp = java.util.UUID.randomUUID().toString();
+
+        if (!circuitBreakerService.permiteTrafico()) {
+            var cbStatus = circuitBreakerService.obtenerEstado();
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(RespuestaSistema.error(
+                            "Circuit Breaker ABIERTO: Transacciones bloqueadas. " + cbStatus.getMensaje(),
+                            nombreNodo,
+                            txGuidTmp,
+                            null
+                    ));
+        }
         try {
             Transaccion tx = transaccionService.ejecutarTransferencia(request);
             return ResponseEntity.ok(RespuestaSistema.ok(

@@ -12,11 +12,14 @@ Esta guía contiene la información estructurada, técnica y conceptual precisa 
 
 --- ## 2. Diagrama de la Arquitectura Distribuida
 
-El flujo de peticiones, balanceo de carga y replicación funciona de la siguiente manera:
+El flujo de peticiones, protección por Circuit Breaker por quórum, balanceo de carga y replicación funciona de la siguiente manera:
 
 ```mermaid
 flowchart TD
-    Cliente[Cliente / Interfaz Frontend] -- HTTP --> LB[Nginx Load Balancer - PC1:80]
+    Cliente[Cliente / Interfaz Frontend] -- HTTP --> CB_Gate{Circuit Breaker\nQuórum ≥ 2 Nodos?}
+    
+    CB_Gate -- OPEN: < 2 Nodos --> CB_Block[HTTP 503 Bloqueo Escrituras\nCooldown 15s -> HALF-OPEN]
+    CB_Gate -- CLOSED / HALF-OPEN --> LB[Nginx Load Balancer - PC1:80]
     
     subgraph Balanceo Cíclico Round Robin
         LB -- Cíclico PC1 --> API1[API Spring Boot - Nodo 1 PC1:8081]
@@ -30,11 +33,11 @@ flowchart TD
         API3 -- Conexión JDBC Lectura Local / Escritura a Master --> DB_Replica2[(MariaDB Replica 2 PC3:3306)]
         
         DB_Master -- Replicación GTID (Asíncrona) --> DB_Replica1
-        DB_Master -- Replicación GTID (Asíncrona) --> DB_Replica2
+        DB_Master -- Replicación GTID Asíncrona --> DB_Replica2
     end
 ```
 
-### 2.1 Diagrama de Componentes (Nivel API, DB y Replicación)
+### 2.1 Diagrama de Componentes (Nivel API, Circuit Breaker, DB y Replicación)
 
 Este diagrama representa los bloques y componentes lógicos del sistema, la separación de responsabilidades y el flujo de replicación interno:
 
@@ -42,15 +45,17 @@ Este diagrama representa los bloques y componentes lógicos del sistema, la sepa
 flowchart TB
     subgraph Capa_Cliente [Capa Cliente - Interfaz Web]
         UI[Formularios & Panel Operativo]
+        CBDash[Panel Dashboard Circuit Breaker]
         DBExp[Explorador de Base de Datos Dinámico]
     end
 
-    subgraph Capa_Middleware [Capa Middleware - Balanceo]
+    subgraph Capa_Middleware [Capa Middleware - Gateway & Balanceo]
+        CBService[Circuit Breaker Service & Monitor Health]
         Nginx[Balanceador Nginx PC1:80]
     end
 
     subgraph Capa_Backend [Capa Backend - API Spring Boot]
-        RestCtrl[Controladores REST]
+        RestCtrl[Controladores REST / TransaccionController]
         TxService[Servicio de Transacciones / Auditoría WAL]
         JpaRepo[Repositorios JPA / Hibernate]
         ConnPool[Hikari Connection Pool]
@@ -75,7 +80,11 @@ flowchart TB
     end
 
     %% Flujos e Interacciones
-    UI -- Peticiones HTTP POST/GET --> Nginx
+    UI -- Peticiones HTTP POST/GET --> CBService
+    CBDash -- Consulta Estado /status --> CBService
+    CBService -- Quórum Ok (≥2 Nodos) --> Nginx
+    CBService -- Quórum Fallido (<2 Nodos) --> UI
+    
     DBExp -- Peticiones HTTP GET (Auditoría) --> Nginx
     
     Nginx -- Balanceo Round Robin --> RestCtrl

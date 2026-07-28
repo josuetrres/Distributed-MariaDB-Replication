@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Transacciones Bancarias ACID - MariaDB WAL & Replicación</title>
     <link rel="stylesheet" href="css/estilos.css">
 </head>
+
 <body>
 
     <!-- Encabezado Principal -->
@@ -23,9 +25,12 @@
     <div class="container">
         <!-- Barra de Pestañas de Navegación -->
         <div class="tabs-container">
-            <button id="tab-btn-operaciones" class="tab-btn active" onclick="cambiarPestaña('operaciones')">Operaciones y Resultados Bancarios</button>
-            <button id="tab-btn-tecnicos" class="tab-btn" onclick="cambiarPestaña('tecnicos')">Monitoreo y Detalles Técnicos (ACID / WAL / LSN)</button>
-            <button id="tab-btn-replicacion" class="tab-btn" onclick="cambiarPestaña('replicacion')">Bases de Datos y Replicación (Master vs Réplicas)</button>
+            <button id="tab-btn-operaciones" class="tab-btn active" onclick="cambiarPestaña('operaciones')">Operaciones
+                y Resultados Bancarios</button>
+            <button id="tab-btn-tecnicos" class="tab-btn" onclick="cambiarPestaña('tecnicos')">Monitoreo y Detalles
+                Técnicos (ACID / WAL / LSN)</button>
+            <button id="tab-btn-replicacion" class="tab-btn" onclick="cambiarPestaña('replicacion')">Bases de Datos y
+                Replicación (Master vs Réplicas)</button>
         </div>
 
         <!-- SECCIÓN 1: OPERACIONES Y RESULTADOS (Pestaña Por Defecto) -->
@@ -48,14 +53,23 @@
                     </div>
                     <div class="form-group">
                         <label for="monto">Monto a Transferir (USD):</label>
-                        <input type="number" id="monto" class="form-control" min="0.01" step="0.01" value="500.00" required>
+                        <input type="number" id="monto" class="form-control" min="0.01" step="0.01" value="500.00"
+                            required>
                     </div>
 
                     <div class="checkbox-group">
                         <input type="checkbox" id="simular-error">
-                        <label for="simular-error">Simular Falla / Excepción Repentina (Probar proceso UNDO Rollback)</label>
+                        <label for="simular-error">Simular Falla / Excepción Repentina (Probar proceso UNDO
+                            Rollback)</label>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Ejecutar Transacción Bancaria</button>
+
+                    <div id="cb-form-warning"
+                        style="display: none; padding: 12px; margin-bottom: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; color: #dc2626; font-size: 0.85rem;">
+                        ⚠️ <strong>Circuit Breaker ABIERTO:</strong> Menos de 2 nodos activos. Las transacciones
+                        bancarias están bloqueadas para prevenir inconsistencias.
+                    </div>
+                    <button type="submit" id="btn-submit-tx" class="btn btn-primary" style="margin-top: 15px;">Ejecutar
+                        Transacción Bancaria</button>
                 </form>
             </div>
 
@@ -66,7 +80,8 @@
                     <span id="saldo-invariante" style="font-size: 0.9rem; color: var(--accent-green);">$0.00 USD</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
-                    Invariante de Consistencia (C): El saldo total del banco se mantiene constante antes y después de cada transacción ($165,000.00 USD).
+                    Invariante de Consistencia (C): El saldo total del banco se mantiene constante antes y después de
+                    cada transacción ($165,000.00 USD).
                 </p>
                 <div class="table-container">
                     <table>
@@ -78,7 +93,9 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-cuentas-body">
-                            <tr><td colspan="3">Cargando cuentas...</td></tr>
+                            <tr>
+                                <td colspan="3">Cargando cuentas...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -101,7 +118,9 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-transacciones-body">
-                            <tr><td colspan="5">Cargando historial de transacciones...</td></tr>
+                            <tr>
+                                <td colspan="5">Cargando historial de transacciones...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -111,6 +130,64 @@
 
         <!-- SECCIÓN 2: DETALLES TÉCNICOS (WAL, LSN, Replicación y Arquitectura) -->
         <div id="seccion-tecnicos" class="tab-section" style="display: none;">
+
+            <!-- Card: Estado del Circuit Breaker (Cortacircuitos) en PC1 -->
+            <div class="card" style="grid-column: 1 / -1; border-top: 4px solid var(--accent-blue);">
+                <div class="card-title"
+                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <span style="font-weight: 700; font-size: 1.1rem;">Circuit Breaker</span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 2px;">
+                            Protección contra fallas de quórum (Criterio: &ge; 2 nodos activos para operabilidad)
+                        </span>
+                    </div>
+                    <span id="cb-badge-estado" class="tag"
+                        style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-weight: bold; font-size: 0.95rem; padding: 6px 14px;">
+                        CLOSED (Pasando Tráfico)
+                    </span>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+                    <div class="metric-box"
+                        style="margin-bottom: 0; padding: 14px; background: rgba(0, 82, 204, 0.04); border-radius: 8px; border: 1px solid rgba(0, 82, 204, 0.1);">
+                        <div
+                            style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                            Nodos Activos en Red</div>
+                        <div id="cb-nodos-activos-text"
+                            style="font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin-top: 4px;">- / 3
+                            Nodos</div>
+                        <small style="font-size: 0.75rem; color: var(--text-muted);">Requerido: &ge; 2 nodos</small>
+                    </div>
+
+                    <div class="metric-box"
+                        style="margin-bottom: 0; padding: 14px; background: rgba(245, 158, 11, 0.04); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.15);">
+                        <div
+                            style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                            Tiempo para Half-Open</div>
+                        <div id="cb-tiempo-halfopen-text"
+                            style="font-size: 1.4rem; font-weight: 700; color: #f59e0b; margin-top: 4px;">0s (Normal)
+                        </div>
+                        <small style="font-size: 0.75rem; color: var(--text-muted);">Cooldown de 15 segundos al
+                            abrir</small>
+                    </div>
+                </div>
+
+                <!-- Mensaje y detalle en vivo -->
+                <div id="cb-mensaje-box"
+                    style="margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-size: 0.88rem; background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; color: #065f46;">
+                    <strong>Estado del Circuit Breaker:</strong> Monitoreando salud de los nodos...
+                </div>
+
+                <!-- Leyenda de Estados del Circuit Breaker -->
+                <div
+                    style="margin-top: 14px; display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-muted); background: rgba(0,0,0,0.02); padding: 10px; border-radius: 6px;">
+                    <div>🟢 <strong>CLOSED:</strong> &ge; 2 Nodos activos. Tráfico normal.</div>
+                    <div>🔴 <strong>OPEN:</strong> &lt; 2 Nodos activos. Bloquea escrituras (503) & Temporizador 15s.
+                    </div>
+                    <div>🟡 <strong>HALF-OPEN:</strong> 15s transcurridos. Prueba re-conexión de nodos.</div>
+                </div>
+            </div>
 
             <!-- Card: Monitoreo en Tiempo Real de los 3 Nodos LAN -->
             <div class="card" style="grid-column: 1 / -1;">
@@ -130,7 +207,9 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-nodos-body">
-                            <tr><td colspan="5">Consultando estado real de PC1, PC2 y PC3...</td></tr>
+                            <tr>
+                                <td colspan="5">Consultando estado real de PC1, PC2 y PC3...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -143,28 +222,46 @@
                     <span style="font-size: 0.8rem; color: var(--accent-green);">Motor Transaccional ACID Activo</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
-                    Monitoreo en tiempo real de los números de secuencia de log (LSN) e indicadores internos de InnoDB que garantizan la atomicidad y durabilidad ante fallas.
+                    Monitoreo en tiempo real de los números de secuencia de log (LSN) e indicadores internos de InnoDB
+                    que garantizan la atomicidad y durabilidad ante fallas.
                 </p>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
                     <div class="metric-box" style="margin-bottom: 0;">
-                        <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Log Sequence Number (LSN)</div>
+                        <div
+                            style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                            Log Sequence Number (LSN)</div>
                         <div id="innodb-lsn" class="metric-val">Cargando...</div>
-                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Posición actual del log en memoria</div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Posición actual
+                            del log en memoria</div>
                     </div>
                     <div class="metric-box" style="margin-bottom: 0; border-left-color: var(--accent-green);">
-                        <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Volcado a Disco (Flushed Up To)</div>
-                        <div id="innodb-flushed" class="metric-val" style="color: var(--accent-blue); background: #f0f7ff; border-color: #bfdbfe;">Cargando...</div>
-                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Persistencia física asegurada</div>
+                        <div
+                            style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                            Volcado a Disco (Flushed Up To)</div>
+                        <div id="innodb-flushed" class="metric-val"
+                            style="color: var(--accent-blue); background: #f0f7ff; border-color: #bfdbfe;">Cargando...
+                        </div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Persistencia
+                            física asegurada</div>
                     </div>
                     <div class="metric-box" style="margin-bottom: 0; border-left-color: var(--accent-purple);">
-                        <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Último Checkpoint Seguro</div>
-                        <div id="innodb-checkpoint" class="metric-val" style="color: var(--accent-purple); background: #faf5ff; border-color: #e9d5ff;">Cargando...</div>
-                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Sincronización Buffer Pool &rarr; Disco</div>
+                        <div
+                            style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                            Último Checkpoint Seguro</div>
+                        <div id="innodb-checkpoint" class="metric-val"
+                            style="color: var(--accent-purple); background: #faf5ff; border-color: #e9d5ff;">Cargando...
+                        </div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;">Sincronización
+                            Buffer Pool &rarr; Disco</div>
                     </div>
                 </div>
-                <details style="background: rgba(248, 250, 252, 0.8); border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-top: 10px;">
-                    <summary style="font-size: 0.85rem; font-weight: 600; color: var(--accent-blue); cursor: pointer;">Ver Salida Bruta del Servidor (SHOW ENGINE INNODB STATUS)</summary>
-                    <pre id="innodb-raw-status" style="margin-top: 12px; font-family: 'Fira Code', monospace; font-size: 0.78rem; color: #334155; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">Consultando estado bruto de InnoDB...</pre>
+                <details
+                    style="background: rgba(248, 250, 252, 0.8); border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-top: 10px;">
+                    <summary style="font-size: 0.85rem; font-weight: 600; color: var(--accent-blue); cursor: pointer;">
+                        Ver Salida Bruta del Servidor (SHOW ENGINE INNODB STATUS)</summary>
+                    <pre id="innodb-raw-status"
+                        style="margin-top: 12px; font-family: 'Fira Code', monospace; font-size: 0.78rem; color: #334155; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">Consultando estado bruto de InnoDB...</pre>
                 </details>
             </div>
 
@@ -174,7 +271,8 @@
                     <span>Bitácora WAL de Transacciones (Secuencia de Fases)</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
-                    Muestra los pasos registrados por el algoritmo WAL: <strong>INICIADA &rarr; WAL_GRABADO_BUFFER &rarr; REDO_PREPARADO &rarr; COMMIT_FLUSH / ROLLBACK_EJECUTADO</strong>.
+                    Muestra los pasos registrados por el algoritmo WAL: <strong>INICIADA &rarr; WAL_GRABADO_BUFFER
+                        &rarr; REDO_PREPARADO &rarr; COMMIT_FLUSH / ROLLBACK_EJECUTADO</strong>.
                 </p>
                 <div class="table-container" style="max-height: 280px; overflow-y: auto;">
                     <table>
@@ -186,7 +284,9 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-wal-body">
-                            <tr><td colspan="3">Cargando bitácora WAL...</td></tr>
+                            <tr>
+                                <td colspan="3">Cargando bitácora WAL...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -201,10 +301,12 @@
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
                     <span>Topología y Estado de Replicación MariaDB GTID (Master vs Réplicas)</span>
-                    <span style="font-size: 0.8rem; color: var(--accent-purple);">Sincronización Asíncrona / GTID Activo</span>
+                    <span style="font-size: 0.8rem; color: var(--accent-purple);">Sincronización Asíncrona / GTID
+                        Activo</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
-                    Muestra los parámetros internos y métricas del motor de base de datos consultados directamente a través de una conexión JDBC hacia su contenedor local.
+                    Muestra los parámetros internos y métricas del motor de base de datos consultados directamente a
+                    través de una conexión JDBC hacia su contenedor local.
                 </p>
                 <div class="table-container" style="max-height: 280px; overflow-y: auto;">
                     <table>
@@ -217,7 +319,9 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-replicacion-topologia-body">
-                            <tr><td colspan="4">Consultando estado real de las bases de datos en los 3 nodos...</td></tr>
+                            <tr>
+                                <td colspan="4">Consultando estado real de las bases de datos en los 3 nodos...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -227,10 +331,13 @@
             <div class="card" style="grid-column: 1 / -1;">
                 <div class="card-title">
                     <span>Verificación de Lectura Distribuida (Consistencia de Datos en Vivo)</span>
-                    <span style="font-size: 0.8rem; color: var(--accent-green);">Prueba de Lectura Independiente por Nodo</span>
+                    <span style="font-size: 0.8rem; color: var(--accent-green);">Prueba de Lectura Independiente por
+                        Nodo</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
-                    Se ejecuta una consulta <code>SELECT COUNT(*), SUM(saldo) FROM cuentas</code> sobre la base de datos de cada PC para demostrar visualmente que la replicación mantiene una copia idéntica y sincronizada de los datos.
+                    Se ejecuta una consulta <code>SELECT COUNT(*), SUM(saldo) FROM cuentas</code> sobre la base de datos
+                    de cada PC para demostrar visualmente que la replicación mantiene una copia idéntica y sincronizada
+                    de los datos.
                 </p>
                 <div class="table-container" style="max-height: 280px; overflow-y: auto;">
                     <table>
@@ -244,39 +351,54 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-replicacion-lectura-body">
-                            <tr><td colspan="5">Verificando sincronización de lectura en las réplicas...</td></tr>
+                            <tr>
+                                <td colspan="5">Verificando sincronización de lectura en las réplicas...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <!-- Card: Consola Interactiva / Explorador de Datos de BD en Vivo -->
-            <div class="card" style="grid-column: 1 / -1; border: 1px solid var(--border-light); background: var(--bg-card);">
-                <div class="card-title" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div class="card"
+                style="grid-column: 1 / -1; border: 1px solid var(--border-light); background: var(--bg-card);">
+                <div class="card-title"
+                    style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <span style="color: var(--text-main); font-weight: 600;"> Explorador de Datos en Vivo (Por Nodo de BD)</span>
+                        <span style="color: var(--text-main); font-weight: 600;"> Explorador de Datos en Vivo (Por Nodo
+                            de BD)</span>
                         <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-top: 4px;">
-                            Selecciona una instancia para extraer los registros reales de las tablas y visualizarlos en tablas formateadas o en formato JSON original.
+                            Selecciona una instancia para extraer los registros reales de las tablas y visualizarlos en
+                            tablas formateadas o en formato JSON original.
                         </div>
                     </div>
-                    <span id="consola-bd-badge" class="tag" style="background: rgba(0, 82, 204, 0.1); color: var(--accent-blue); font-family: monospace; font-size: 0.75rem;">
+                    <span id="consola-bd-badge" class="tag"
+                        style="background: rgba(0, 82, 204, 0.1); color: var(--accent-blue); font-family: monospace; font-size: 0.75rem;">
                         Esperando Selección de BD
                     </span>
                 </div>
 
                 <!-- Botones de Acción de Consulta -->
                 <div style="display: flex; gap: 12px; margin: 12px 0; flex-wrap: wrap;">
-                    <button class="btn btn-primary" onclick="consultarConsolaBd(1)" style="background: var(--accent-blue); font-size: 0.85rem; padding: 8px 16px;">Leer BD Master (PC1 - 192.168.1.93)
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(1)"
+                        style="background: var(--accent-blue); font-size: 0.85rem; padding: 8px 16px;">Leer BD Master
+                        (PC1 - 192.168.1.93)
                     </button>
-                    <button class="btn btn-primary" onclick="consultarConsolaBd(2)" style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">Leer BD Réplica 1 (PC2 - 192.168.1.8)
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(2)"
+                        style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">Leer BD Réplica
+                        1 (PC2 - 192.168.1.8)
                     </button>
-                    <button class="btn btn-primary" onclick="consultarConsolaBd(3)" style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">Leer BD Réplica 2 (PC3 - 192.168.1.30)
+                    <button class="btn btn-primary" onclick="consultarConsolaBd(3)"
+                        style="background: var(--accent-purple); font-size: 0.85rem; padding: 8px 16px;">Leer BD Réplica
+                        2 (PC3 - 192.168.1.30)
                     </button>
                 </div>
 
                 <!-- Ventana de Consola / Salida de Datos -->
-                <div id="consola-bd-wrapper" style="background: rgba(248, 250, 252, 0.95); border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; min-height: 200px; max-height: 500px; overflow: auto; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
-                    <pre id="consola-bd-output" style="margin: 0; font-family: 'Fira Code', 'Courier New', Courier, monospace; font-size: 0.82rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-all;">// Explorador Preparado (Tablas y JSON).
+                <div id="consola-bd-wrapper"
+                    style="background: rgba(248, 250, 252, 0.95); border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; min-height: 200px; max-height: 500px; overflow: auto; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+                    <pre id="consola-bd-output"
+                        style="margin: 0; font-family: 'Fira Code', 'Courier New', Courier, monospace; font-size: 0.82rem; color: #1e293b; line-height: 1.45; white-space: pre-wrap; word-break: break-all;">// Explorador Preparado (Tablas y JSON).
 // Pulsa en cualquiera de los botones superiores para ejecutar la lectura directa a la base de datos de ese PC específico...
 // Se consultarán las siguientes tablas en vivo:
 // 1. Servidor MariaDB (Host, Server ID, GTID, Rol de Replicación)
@@ -297,4 +419,5 @@
     <script src="js/simulador.js"></script>
     <script src="js/app.js"></script>
 </body>
+
 </html>

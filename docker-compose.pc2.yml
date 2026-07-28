@@ -40,6 +40,9 @@ services:
       DB_USER: ${DB_USER:-banco_user}
       DB_PASSWORD: ${DB_PASSWORD:-banco_pass_segura}
       NODE_NAME: "API2-PC2 (Replica 1)"
+      PC1_IP: ${PC1_IP:-127.0.0.1}
+      PC2_IP: ${PC2_IP:-127.0.0.1}
+      PC3_IP: ${PC3_IP:-127.0.0.1}
     ports:
       - "${API2_PORT:-8082}:8082"
     depends_on:

@@ -66,10 +66,104 @@ async function cargarDatos() {
             cargarInfoNodo(),
             cargarEstadoNodosRealTime(),
             cargarEstadoReplicacionRealTime(),
-            cargarMetricasWalInnodb()
+            cargarMetricasWalInnodb(),
+            cargarEstadoCircuitBreaker()
         ]);
     } catch (err) {
         console.error('Error al actualizar dashboard:', err);
+    }
+}
+
+async function cargarEstadoCircuitBreaker() {
+    try {
+        const res = await ApiService.obtenerEstadoCircuitBreaker();
+        if (!res || !res.datos) return;
+
+        const data = res.datos;
+        const badgeState = document.getElementById('cb-badge-estado');
+        const nodosActivosText = document.getElementById('cb-nodos-activos-text');
+        const tiempoHalfopenText = document.getElementById('cb-tiempo-halfopen-text');
+        const mensajeBox = document.getElementById('cb-mensaje-box');
+        const formWarning = document.getElementById('cb-form-warning');
+        const btnSubmit = document.getElementById('btn-submit-tx');
+
+        if (nodosActivosText) {
+            nodosActivosText.innerText = `${data.nodosActivos} / ${data.totalNodos} Nodos`;
+        }
+
+        if (badgeState && mensajeBox) {
+            if (data.estado === 'CLOSED') {
+                badgeState.className = 'tag';
+                badgeState.style.cssText = 'background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; font-weight: bold; font-size: 0.95rem; padding: 6px 14px;';
+                badgeState.innerText = 'CLOSED (Pasando Tráfico)';
+
+                mensajeBox.style.cssText = 'margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-size: 0.88rem; background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; color: #065f46;';
+                mensajeBox.innerHTML = `<strong>Estado del Circuit Breaker:</strong> ${data.mensaje}`;
+
+                if (tiempoHalfopenText) {
+                    tiempoHalfopenText.innerText = '0s (Normal)';
+                    tiempoHalfopenText.style.color = '#10b981';
+                }
+
+                if (formWarning) formWarning.style.display = 'none';
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.opacity = '1';
+                    btnSubmit.innerText = 'Ejecutar Transacción Bancaria';
+                }
+
+            } else if (data.estado === 'OPEN') {
+                badgeState.className = 'tag';
+                badgeState.style.cssText = 'background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; font-weight: bold; font-size: 0.95rem; padding: 6px 14px;';
+                badgeState.innerText = 'OPEN (Bloqueando Tráfico)';
+
+                mensajeBox.style.cssText = 'margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-size: 0.88rem; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444; color: #991b1b;';
+                mensajeBox.innerHTML = `<strong>⚡ Circuit Breaker ABIERTO:</strong> ${data.mensaje}`;
+
+                if (tiempoHalfopenText) {
+                    const sec = data.tiempoRestanteHalfOpenSegundos || 0;
+                    tiempoHalfopenText.innerText = `${sec}s para Half-Open`;
+                    tiempoHalfopenText.style.color = '#ef4444';
+                }
+
+                if (formWarning) {
+                    formWarning.style.display = 'block';
+                    formWarning.innerHTML = `⚠️ <strong>Circuit Breaker ABIERTO:</strong> Solo hay ${data.nodosActivos} de 3 nodos activos (&lt; 2 requeridos). Las transacciones bancarias se han pausado por seguridad (Cooldown: ${data.tiempoRestanteHalfOpenSegundos || 0}s).`;
+                }
+
+                if (btnSubmit) {
+                    btnSubmit.disabled = true;
+                    btnSubmit.style.opacity = '0.5';
+                    btnSubmit.innerText = '⛔ Transacciones Bloqueadas (Circuit Breaker ABIERTO)';
+                }
+
+            } else if (data.estado === 'HALF_OPEN') {
+                badgeState.className = 'tag';
+                badgeState.style.cssText = 'background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; font-weight: bold; font-size: 0.95rem; padding: 6px 14px;';
+                badgeState.innerText = 'HALF-OPEN (Verificando Nodos)';
+
+                mensajeBox.style.cssText = 'margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-size: 0.88rem; background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b; color: #92400e;';
+                mensajeBox.innerHTML = `<strong>⚡ Circuit Breaker SEMI-ABIERTO:</strong> ${data.mensaje}`;
+
+                if (tiempoHalfopenText) {
+                    tiempoHalfopenText.innerText = 'Evaluando recuperacion...';
+                    tiempoHalfopenText.style.color = '#f59e0b';
+                }
+
+                if (formWarning) {
+                    formWarning.style.display = 'block';
+                    formWarning.innerHTML = `🔍 <strong>Circuit Breaker HALF-OPEN:</strong> Verificando si los nodos respondieron adecuadamente...`;
+                }
+
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.opacity = '0.85';
+                    btnSubmit.innerText = 'Ejecutar Transacción Bancaria (Prueba Half-Open)';
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error al actualizar Circuit Breaker:', e);
     }
 }
 
@@ -333,96 +427,138 @@ async function cargarEstadoReplicacionRealTime() {
             ApiService.obtenerEstadoReplicacionNodo(3)
         ]);
 
-        if (res1.activo && res1.datos) cacheReplicacion[1] = res1.datos;
-        if (res2.activo && res2.datos) cacheReplicacion[2] = res2.datos;
-        if (res3.activo && res3.datos) cacheReplicacion[3] = res3.datos;
+        const d1 = (res1.activo && res1.datos) ? { ...res1.datos, activo: true } : { activo: false };
+        const d2 = (res2.activo && res2.datos) ? { ...res2.datos, activo: true } : { activo: false };
+        const d3 = (res3.activo && res3.datos) ? { ...res3.datos, activo: true } : { activo: false };
 
-        const d1 = (res1.activo && res1.datos) ? res1.datos : (cacheReplicacion[1] || {});
-        const d2 = (res2.activo && res2.datos) ? res2.datos : (cacheReplicacion[2] || {});
-        const d3 = (res3.activo && res3.datos) ? res3.datos : (cacheReplicacion[3] || {});
+        const renderRole = (d, roleDefault) => {
+            if (!d.activo) return `<span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.15); color: #dc2626;">INACTIVO / DESCONECTADO</span>`;
+            return `<span class="tag tag-completada" style="background: rgba(0, 82, 204, 0.15); color: var(--accent-blue);">${d.role || roleDefault}</span>`;
+        };
+
+        const renderHostname = (d, defaultHost) => {
+            if (!d.activo) return `<code>—</code>`;
+            return `<code>${d.hostnameDb || defaultHost}</code>`;
+        };
+
+        const renderServerId = (d, defaultId) => {
+            if (!d.activo) return `<code>—</code>`;
+            return `<code>${d.serverId || defaultId}</code>`;
+        };
+
+        const renderReadOnly = (d, val, desc) => {
+            if (!d.activo) return `<span style="color: var(--text-muted);">—</span>`;
+            return `<span style="color: var(--accent-${val === '0' ? 'green' : 'orange'}); font-weight: 600;">${val} (${desc})</span>`;
+        };
+
+        const renderSlaveStatus = (d) => {
+            if (!d.activo) return `<span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.12); color: #dc2626;">DESCONECTADO</span>`;
+            return `<span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.12); color: #059669;">IO: ${d.slaveIoRunning || 'Yes'} | SQL: ${d.slaveSqlRunning || 'Yes'}</span>`;
+        };
+
+        const renderLag = (d) => {
+            if (!d.activo) return `<code style="color: var(--text-muted);">Sin conexión</code>`;
+            return `<code style="color: var(--accent-green);">${d.secondsBehindMaster || '0'} s (Sincronizado)</code>`;
+        };
+
+        const renderMasterHost = (d, defaultIp) => {
+            if (!d.activo) return `<code>—</code>`;
+            return `<code>${d.masterHostConectado || defaultIp}</code>`;
+        };
+
+        const renderGtid = (d, defaultGtid) => {
+            if (!d.activo) return `<code>—</code>`;
+            return `<code>${d.gtidPos || defaultGtid}</code>`;
+        };
 
         // 1. Render Tabla Topología y Estado Replicación (Filas = Métricas, Columnas = Nodos BD)
         tbodyTopologia.innerHTML = `
             <tr>
                 <td><strong>Rol en Replicación</strong></td>
-                <td><span class="tag tag-completada" style="background: rgba(0, 82, 204, 0.15); color: var(--accent-blue);">${d1.role || 'MASTER (Escritura / Lectura)'}</span></td>
-                <td><span class="tag tag-completada" style="background: rgba(139, 92, 246, 0.15); color: var(--accent-purple);">${d2.role || 'RÉPLICA (Solo Lectura)'}</span></td>
-                <td><span class="tag tag-completada" style="background: rgba(139, 92, 246, 0.15); color: var(--accent-purple);">${d3.role || 'RÉPLICA (Solo Lectura)'}</span></td>
+                <td>${renderRole(d1, 'MASTER (Escritura / Lectura)')}</td>
+                <td>${renderRole(d2, 'RÉPLICA (Solo Lectura)')}</td>
+                <td>${renderRole(d3, 'RÉPLICA (Solo Lectura)')}</td>
             </tr>
             <tr>
                 <td><strong>Hostname BD Contenedor</strong></td>
-                <td><code>${d1.hostnameDb || 'mariadb-master-pc1'}</code></td>
-                <td><code>${d2.hostnameDb || 'mariadb-replica1-pc2'}</code></td>
-                <td><code>${d3.hostnameDb || 'mariadb-replica2-pc3'}</code></td>
+                <td>${renderHostname(d1, 'mariadb-master-pc1')}</td>
+                <td>${renderHostname(d2, 'mariadb-replica1-pc2')}</td>
+                <td>${renderHostname(d3, 'mariadb-replica2-pc3')}</td>
             </tr>
             <tr>
                 <td><strong>Server ID (@@server_id)</strong></td>
-                <td><code>${d1.serverId || '1'}</code></td>
-                <td><code>${d2.serverId || '2'}</code></td>
-                <td><code>${d3.serverId || '3'}</code></td>
+                <td>${renderServerId(d1, '1')}</td>
+                <td>${renderServerId(d2, '2')}</td>
+                <td>${renderServerId(d3, '3')}</td>
             </tr>
             <tr>
                 <td><strong>Modo Solo Lectura (@@read_only)</strong></td>
-                <td><span style="color: var(--accent-green); font-weight: 600;">0 (OFF - Escritura Habilitada)</span></td>
-                <td><span style="color: var(--accent-orange); font-weight: 600;">1 (ON - Bloqueo de Escritura)</span></td>
-                <td><span style="color: var(--accent-orange); font-weight: 600;">1 (ON - Bloqueo de Escritura)</span></td>
+                <td>${renderReadOnly(d1, '0', 'OFF - Escritura Habilitada')}</td>
+                <td>${renderReadOnly(d2, '1', 'ON - Bloqueo de Escritura')}</td>
+                <td>${renderReadOnly(d3, '1', 'ON - Bloqueo de Escritura')}</td>
             </tr>
             <tr>
                 <td><strong>Hilos Slave IO / SQL Running</strong></td>
                 <td><span style="color: var(--text-muted);">N/A (Es Master)</span></td>
-                <td><span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.12); color: #059669;">IO: ${d2.slaveIoRunning || 'Yes'} | SQL: ${d2.slaveSqlRunning || 'Yes'}</span></td>
-                <td><span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.12); color: #059669;">IO: ${d3.slaveIoRunning || 'Yes'} | SQL: ${d3.slaveSqlRunning || 'Yes'}</span></td>
+                <td>${renderSlaveStatus(d2)}</td>
+                <td>${renderSlaveStatus(d3)}</td>
             </tr>
             <tr>
                 <td><strong>Retardo Replicación (Lag)</strong></td>
                 <td><code>0 ms (Master)</code></td>
-                <td><code style="color: var(--accent-green);">${d2.secondsBehindMaster || '0'} s (Sincronizado)</code></td>
-                <td><code style="color: var(--accent-green);">${d3.secondsBehindMaster || '0'} s (Sincronizado)</code></td>
+                <td>${renderLag(d2)}</td>
+                <td>${renderLag(d3)}</td>
             </tr>
             <tr>
                 <td><strong>Host Master Conectado</strong></td>
                 <td><span style="color: var(--text-muted);">N/A (Local es Master)</span></td>
-                <td><code>${d2.masterHostConectado || '192.168.1.93'}</code></td>
-                <td><code>${d3.masterHostConectado || '192.168.1.93'}</code></td>
+                <td>${renderMasterHost(d2, '192.168.1.93')}</td>
+                <td>${renderMasterHost(d3, '192.168.1.93')}</td>
             </tr>
             <tr>
                 <td><strong>Posición GTID Sincronizada</strong></td>
-                <td style="font-size: 0.8rem; word-break: break-all;"><code>${d1.gtidPos || '0-1-1'}</code></td>
-                <td style="font-size: 0.8rem; word-break: break-all;"><code>${d2.gtidPos || '0-1-1'}</code></td>
-                <td style="font-size: 0.8rem; word-break: break-all;"><code>${d3.gtidPos || '0-1-1'}</code></td>
+                <td style="font-size: 0.8rem; word-break: break-all;">${renderGtid(d1, '0-1-1')}</td>
+                <td style="font-size: 0.8rem; word-break: break-all;">${renderGtid(d2, '0-1-1')}</td>
+                <td style="font-size: 0.8rem; word-break: break-all;">${renderGtid(d3, '0-1-1')}</td>
             </tr>
         `;
 
         // 2. Render Tabla Verificación de Lectura Distribuida (Filas = Nodos BD)
-        const checkSincronizado = (total, suma) => {
-            if (total !== '0' && total !== 'Error lectura' && suma !== 'Error lectura') {
-                return `<span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.15); color: #059669;"> 100% Sincronizado</span>`;
+        const renderLecturaRow = (nombre, host, d, isMaster = false) => {
+            if (!d.activo) {
+                return `
+                    <tr>
+                        <td><strong>${nombre}</strong><br><small style="color: var(--text-muted);">${host}</small></td>
+                        <td><small style="color: var(--text-muted);">Sin conexión</small></td>
+                        <td><strong style="color: var(--text-muted); font-size: 0.95rem;">Sin conexión</strong></td>
+                        <td><span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.15); color: #dc2626;"> 🔴 Desconectado / Inactivo</span></td>
+                        <td><small style="color: var(--text-muted);">API Node Inalcanzable</small></td>
+                    </tr>
+                `;
             }
-            return `<span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.15); color: #dc2626;"> Error / Desconectado</span>`;
+
+            const total = d.totalCuentas || '4';
+            const suma = d.sumaSaldos || 165000;
+            const isOk = total !== '0' && total !== 'Error lectura' && suma !== 'Error lectura';
+            const tagHtml = isOk
+                ? `<span class="tag tag-completada" style="background: rgba(5, 150, 105, 0.15); color: #059669;"> 100% Sincronizado</span>`
+                : `<span class="tag tag-revertida" style="background: rgba(220, 38, 38, 0.15); color: #dc2626;"> Error lectura</span>`;
+
+            return `
+                <tr>
+                    <td><strong>${nombre}</strong><br><small style="color: var(--text-muted);">${host}</small></td>
+                    <td><code>${total} cuentas registradas</code></td>
+                    <td><strong style="color: var(--accent-green); font-size: 1.05rem;">$${Number(suma).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD</strong></td>
+                    <td>${tagHtml}</td>
+                    <td><code>Lectura directa BD Local ${isMaster ? 'Master' : 'Réplica'}</code></td>
+                </tr>
+            `;
         };
 
         tbodyLectura.innerHTML = `
-            <tr>
-                <td><strong>MariaDB Master (PC1)</strong><br><small style="color: var(--text-muted);">Host LAN: 192.168.1.93:3306</small></td>
-                <td><code>${d1.totalCuentas || '4'} cuentas registradas</code></td>
-                <td><strong style="color: var(--accent-green); font-size: 1.05rem;">$${Number(d1.sumaSaldos || 165000).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD</strong></td>
-                <td>${checkSincronizado(d1.totalCuentas, d1.sumaSaldos)}</td>
-                <td><code>Lectura directa BD Local Master</code></td>
-            </tr>
-            <tr>
-                <td><strong>MariaDB Replica 1 (PC2)</strong><br><small style="color: var(--text-muted);">Host LAN: 192.168.1.8:3306</small></td>
-                <td><code>${d2.totalCuentas || '4'} cuentas registradas</code></td>
-                <td><strong style="color: var(--accent-green); font-size: 1.05rem;">$${Number(d2.sumaSaldos || 165000).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD</strong></td>
-                <td>${checkSincronizado(d2.totalCuentas, d2.sumaSaldos)}</td>
-                <td><code>Lectura directa BD Local Réplica 1</code></td>
-            </tr>
-            <tr>
-                <td><strong>MariaDB Replica 2 (PC3)</strong><br><small style="color: var(--text-muted);">Host LAN: 192.168.1.30:3306</small></td>
-                <td><code>${d3.totalCuentas || '4'} cuentas registradas</code></td>
-                <td><strong style="color: var(--accent-green); font-size: 1.05rem;">$${Number(d3.sumaSaldos || 165000).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD</strong></td>
-                <td>${checkSincronizado(d3.totalCuentas, d3.sumaSaldos)}</td>
-                <td><code>Lectura directa BD Local Réplica 2</code></td>
-            </tr>
+            ${renderLecturaRow('MariaDB Master (PC1)', 'Host LAN: 192.168.1.93:3306', d1, true)}
+            ${renderLecturaRow('MariaDB Replica 1 (PC2)', 'Host LAN: PC2:3306', d2, false)}
+            ${renderLecturaRow('MariaDB Replica 2 (PC3)', 'Host LAN: PC3:3306', d3, false)}
         `;
 
     } catch (err) {

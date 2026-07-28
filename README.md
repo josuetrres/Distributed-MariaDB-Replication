@@ -7,9 +7,10 @@ El objetivo técnico principal es evaluar las propiedades **ACID** (especialment
 --- ## Arquitectura de Nodos y Servicios
 
 ```
-PC1 (Master Node) PC2 (Replica 1 Node) PC3 (Replica 2 Node)
-├── Frontend (HTML5/CSS/JS) ├── API2 (Spring Boot 8082) ├── API3 (Spring Boot 8083)
-├── Nginx Proxy (Puerto 80) └── MariaDB Replica 1 (3306) └── MariaDB Replica 2 (3306)
+PC1 (Master Node & Gateway)         PC2 (Replica 1 Node)         PC3 (Replica 2 Node)
+├── Frontend (HTML5/CSS/JS)         ├── API2 (Spring Boot 8082)  ├── API3 (Spring Boot 8083)
+├── Circuit Breaker (Quórum ≥2)     └── MariaDB Replica 1 (3306) └── MariaDB Replica 2 (3306)
+├── Nginx Proxy (Puerto 80)
 ├── API1 (Spring Boot 8081)
 ├── MariaDB Master (3306)
 └── Adminer (Puerto 8080)

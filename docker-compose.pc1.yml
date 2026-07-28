@@ -29,6 +29,9 @@ services:
       DB_USER: ${DB_USER:-banco_user}
       DB_PASSWORD: ${DB_PASSWORD:-banco_pass_segura}
       NODE_NAME: "API1-PC1 (Master)"
+      PC1_IP: ${PC1_IP:-127.0.0.1}
+      PC2_IP: ${PC2_IP:-127.0.0.1}
+      PC3_IP: ${PC3_IP:-127.0.0.1}
     ports:
       - "${API1_PORT:-8081}:8081"
     depends_on:

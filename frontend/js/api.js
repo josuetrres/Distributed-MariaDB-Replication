@@ -54,6 +54,16 @@ const ApiService = {
         return await resp.json();
     },
 
+    async obtenerEstadoCircuitBreaker() {
+        try {
+            const resp = await fetch(`${API_BASE}/circuit-breaker/status`);
+            if (!resp.ok) throw new Error('Error al obtener estado del Circuit Breaker');
+            return await resp.json();
+        } catch (e) {
+            return { exito: false, error: e.message };
+        }
+    },
+
     async obtenerEstadoNodoEspecifico(nodoIndex) {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), 4000);
